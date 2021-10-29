@@ -27,7 +27,7 @@ public class Main {
     //testOrientation();
     //testApplyRotation();
     //testApplyTranslation();
-    //testThin();
+    testThin();
     //testWithSkeleton();
 
     boolean[][] onlyTrue = new boolean[3][3];
@@ -95,6 +95,20 @@ public class Main {
     System.out.println(Fingerprint.identical(partiallyTrue, partiallyTrue));
     System.out.println(Fingerprint.identical(onlyFalse, onlyFalse));
     System.out.println(Fingerprint.identical(onlyTrue, onlyTrue));*/
+
+    // endregion
+
+    // region TEST
+
+    int[][] testARGB = new int[2][256];
+
+    for (int y = 0; y < testARGB.length; y++) {
+      for (int x = 0; x < testARGB[0].length; x++) {
+        testARGB[y][x] = Helper.toARGB(255, x, 0, 0);
+      }
+    }
+
+    Helper.writeARGB("test.png", testARGB);
 
     // endregion
 

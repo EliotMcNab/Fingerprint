@@ -1,9 +1,6 @@
 package cs107;
 
-import jdk.jshell.execution.Util;
-
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
 import java.util.List;
 
 /**
@@ -38,6 +35,27 @@ public class Fingerprint {
    * matching.
    */
     public final int MATCH_ANGLE_OFFSET = 2;
+
+    // the coordinates of the neighbours relatively to the current pixel
+    private static final Map<Integer, Integer[]> relativeNeighbourCoords = new HashMap<>();
+
+    static {
+        // format: index in neighbours, {col, row}
+
+        // pixels above current pixel
+        relativeNeighbourCoords.put(7, new Integer[]{-1, -1});                                              // pixel 7
+        relativeNeighbourCoords.put(0, new Integer[]{-1, 0});                                               // pixel 0
+        relativeNeighbourCoords.put(1, new Integer[]{-1, 1});                                               // pixel 1
+
+        // pixels on the same row as current pixel
+        relativeNeighbourCoords.put(2, new Integer[]{0, 1});                                                // pixel 2
+        relativeNeighbourCoords.put(6, new Integer[]{0, -1});                                               // pixel 6
+
+        // pixels below current pixel
+        relativeNeighbourCoords.put(3, new Integer[]{1, 1});                                                // pixel 3
+        relativeNeighbourCoords.put(4, new Integer[]{1, 0});                                                // pixel 4
+        relativeNeighbourCoords.put(5, new Integer[]{1, -1});                                               // pixel 5
+    }
 
     // TODO implement properly as part of a custom image class
     private static void pixelOutOfBoundsError() {
@@ -152,12 +170,6 @@ public class Fingerprint {
         // the values around the current pixel
         boolean[] neighBoringValues = new boolean[8];
 
-        // whether the current pixels is on a border
-        boolean hasPixelAbove = row != 0;
-        boolean hasPixelBelow = row != image.length-1;
-        boolean hasPixelToLeft = col != 0;
-        boolean hasPixelToRight = col != image[0].length-1;
-
         // checks the values of the pixels above the current pixel
         checkUpperPixels(neighBoringValues, image, row, col);
 
@@ -173,19 +185,19 @@ public class Fingerprint {
 
     // region getNeighbours helper methods
 
-    private static boolean hasPixelToRight(boolean[][] image, int row, int col) {
+    private static boolean hasPixelToRight(boolean[][] image, int col) {
         return col != image[0].length-1;
     }
 
-    private static boolean hasPixelToLeft(boolean[][] image, int row, int col) {
+    private static boolean hasPixelToLeft(int col) {
         return col != 0;
     }
 
-    private static boolean hasPixelAbove(boolean[][] image, int row, int col) {
+    private static boolean hasPixelAbove(int row) {
         return row != 0;
     }
 
-    private static boolean hasPixelBelow(boolean[][] image, int row, int col) {
+    private static boolean hasPixelBelow(boolean[][] image, int row) {
         return row != image.length-1;
     }
 
@@ -201,7 +213,7 @@ public class Fingerprint {
         // region pixel 0 & default values
 
         // if there are no pixels above...
-        if (!hasPixelAbove(image, row, col)) {
+        if (!hasPixelAbove(row)) {
             // ...considers the pixels that should have been above as white pixels
             neighbouringValues[0] = false;       // the pixel in position 0
             neighbouringValues[1] = false;       // the pixel in position 1
@@ -220,7 +232,7 @@ public class Fingerprint {
         // region pixel 1
 
         // if there is a pixel to the right of the current pixel...
-        if (hasPixelToRight(image, row, col)) {
+        if (hasPixelToRight(image, col)) {
             // ...adds the value of that pixel to the neighbouring values
             neighbouringValues[1] = image[row - 1][col + 1];                             // the pixel in position 1
         }
@@ -235,7 +247,7 @@ public class Fingerprint {
         // region pixel 7
 
         // if there is a pixel to the left of the current pixel...
-        if (hasPixelToLeft(image, row, col)) {
+        if (hasPixelToLeft(col)) {
             // ...adds the value of the upper left pixel to the neighbouring values
             neighbouringValues[7] = image[row - 1][col - 1];                             // the pixel in position 7
         }
@@ -261,7 +273,7 @@ public class Fingerprint {
         // region pixel 2
 
         // if there exists a pixel to the right of the current pixel
-        if (hasPixelToRight(image, row, col)) {
+        if (hasPixelToRight(image, col)) {
             // ...adds the value of the pixel to the neighbouring values
             neighbouringValues[2] = image[row][col + 1];                                     // the pixel in position 2
         }
@@ -277,7 +289,7 @@ public class Fingerprint {
         // region pixel 6
 
         // if there exists a pixel to the left of the current pixel
-        if (hasPixelToLeft(image, row, col)) {
+        if (hasPixelToLeft(col)) {
             // ...adds the value of the pixel to the neighbouring values
             neighbouringValues[6] = image[row][col - 1];                                     // the pixel in position 6
         }
@@ -303,7 +315,7 @@ public class Fingerprint {
         // region pixel 4 & default values
 
         // if there are no pixels above the current pixel...
-        if (!hasPixelBelow(image, row, col)) {
+        if (!hasPixelBelow(image, row)) {
             // ...considers the pixels that should have been below as white pixels
             neighbouringValues[3] = false;       // the pixel in position 3
             neighbouringValues[4] = false;       // the pixel in position 4
@@ -322,7 +334,7 @@ public class Fingerprint {
         // region pixel 3
 
         // if there is a pixel to the right of the current pixel...
-        if (hasPixelToRight(image, row, col)) {
+        if (hasPixelToRight(image, col)) {
             // ...adds the value of the lower right pixel to the neighbouring values
             neighbouringValues[3] = image[row + 1][col + 1];                             // the pixel in position 3
         }
@@ -337,7 +349,7 @@ public class Fingerprint {
         // region pixel 5
 
         // if there is a pixel to the left of the current pixel...
-        if (hasPixelToLeft(image, row, col)) {
+        if (hasPixelToLeft(col)) {
             // ...adds the value of the lower left pixel to the neighbouring values
             neighbouringValues[5] = image[row + 1][col - 1];                             // the pixel in position 5
         }
@@ -563,7 +575,7 @@ public class Fingerprint {
     public static boolean[][] thin(boolean[][] image) {
 
         // debug images for each thinning step
-        ArrayList<boolean[][]> debugImages = new ArrayList<>();
+        ArrayList<int[][]> debugImages = new ArrayList<>();
 
         // the dimensions of the image
         final int IMAGE_HEIGHT = image.length;
@@ -588,14 +600,26 @@ public class Fingerprint {
 
             // generates up to the first 20 steps in thinning the fingerprint
             if (i < 20) {
+
+                int[][] previousImageInt = Helper.fromBinary(previousImage);
+                int[][] currentImageInt = Helper.fromBinary(currentImage);
+
+                emphasizeDifferences(previousImageInt, currentImageInt);
+
                 // saves the 1st step
-                debugImages.add(previousImage);
+                debugImages.add(previousImageInt);
                 i++;
                 // saves the 2nd step
-                debugImages.add(currentImage);
+                debugImages.add(currentImageInt);
                 i++;
             }
         }
+
+        // y:3 x:2
+        final boolean[][] connectedPixels = connectedPixels(currentImage, 13, 1, 10);
+        //final boolean[][] connectedPixels = connectedPixels(currentImage, 3, 2, 40);
+
+        Helper.writeBinary("test_connected_pixels.png", connectedPixels);
 
         // generates a debug image based on all the steps taken in thinning the fingerprint
         createDebugImage(debugImages);
@@ -617,6 +641,8 @@ public class Fingerprint {
         }
     }
 
+    // region thin debug methods
+
     private static void emphasizeDifferences(int[][] original, int[][] toCompare) {
 
         // the size of the image
@@ -627,19 +653,16 @@ public class Fingerprint {
         for (int y = 0; y < IMAGE_HEIGHT; y++) {
             // ...and every pixel for that row
             for (int x = 0; x < IMAGE_WIDTH; x++) {
-                // ...if the pixels in both images are the same, and they are black
-                /*if (original[y][x] == toCompare[y][x] && original[y][x] == "fff") {
-                    // ...dims them
-                    original[y][x] =
-                }*/
-
-                // ...if the pixels in both images are different...
-//                if (original[y][x] != toCompare )
+                // ...if the pixels in both images are not same, and the original pixel was black
+                if (original[y][x] != toCompare[y][x]) {
+                    // ...sets its color to red
+                    original[y][x] = Helper.toARGB(0, 255, 0, 0);
+                }
             }
         }
     }
 
-    private static void createDebugImage(ArrayList<boolean[][]> debugImages) {
+    private static void createDebugImage(ArrayList<int[][]> debugImages) {
 
         // the number of debug images
         final int NUM_IMAGES = debugImages.size();
@@ -652,7 +675,7 @@ public class Fingerprint {
         final int FINAL_IMAGE_WIDTH = IMAGE_WIDTH * NUM_IMAGES;
 
         // formatted debug image
-        final boolean[][] FINAL_DEBUG_IMAGE = new boolean[IMAGE_HEIGHT][FINAL_IMAGE_WIDTH];
+        final int[][] FINAL_DEBUG_IMAGE = new int[IMAGE_HEIGHT][FINAL_IMAGE_WIDTH];
 
         // adds every debug image end-to-end to the final image
         for (int y = 0; y < IMAGE_HEIGHT; y++) {
@@ -670,8 +693,10 @@ public class Fingerprint {
         }
 
         // saves the debug image under png format
-        Helper.writeBinary("debug_finderprints.png", FINAL_DEBUG_IMAGE);
+        Helper.writeARGB("debug_fingerprints.png", FINAL_DEBUG_IMAGE);
     }
+
+    // endregion
 
     /**
     * Computes all pixels that are connected to the pixel at coordinate
@@ -686,9 +711,108 @@ public class Fingerprint {
     *         <code>(row, col)</code>.
     */
     public static boolean[][] connectedPixels(boolean[][] image, int row, int col, int distance) {
-      //TODO implement
-      return null;
+
+        // the width of the square area to search
+        final int SEARCH_AREA = distance * 2 + 1;
+
+        // the pixels connected to the minutia within the search area
+        final boolean[][] CONNECTED_PIXELS = new boolean[SEARCH_AREA][SEARCH_AREA];
+
+        for (boolean[] pixelRow : CONNECTED_PIXELS) {
+            Arrays.fill(pixelRow, false);
+        }
+
+        // the original coordinates
+        final int[] ORIGINAL_COORDS = new int[]{row, col};
+
+        // the current coordinates
+        int[] currentCords = Arrays.copyOf(ORIGINAL_COORDS, ORIGINAL_COORDS.length);
+
+        // creates a trail of connected pixels within the specified distance
+        trail(CONNECTED_PIXELS, image, ORIGINAL_COORDS, currentCords, distance);
+
+        // returns the final array of connected pixels
+        return CONNECTED_PIXELS;
     }
+
+    // region connectedPixels helper methods
+
+    private static void trail(boolean[][] connectedPixels, boolean[][] image,
+                              int[] originalCoords, int[] currentCoords,
+                              int distance) {
+
+        // gets the original coordinates
+        int originalX = originalCoords[1];
+        int originalY = originalCoords[0];
+
+        // gets the current coordinates
+        int curX = currentCoords[1];
+        int curY = currentCoords[0];
+
+        // stars the trail at the first pixel
+        connectedPixels[curY][curX] = true;
+
+        // gets the value of the neighbouring pixels
+        boolean[] neighbours = getNeighbours(image, curY, curX);
+
+        // the number of surrounding pixels
+        final int NUM_NEIGHBOURS = neighbours.length;
+
+        // whether a trail has been found
+        boolean trailFound = false;
+
+        // loops through every neighbour...
+        for (int currentNeighbour = 0; currentNeighbour < NUM_NEIGHBOURS; currentNeighbour++) {
+
+            // if a trail has been found...
+            if (trailFound) {
+                // ...exits the for loop
+                break;
+            }
+
+            // the size of the connectedPixels Array
+            final int SIZE = connectedPixels.length;
+
+            // the difference in x and y coordinates
+            final int DELTA_X = curX - originalX;
+            final int DELTA_Y = curY - originalY;
+
+            // checks that we have not reached the maximum allowed distance
+            final boolean HAVE_NOT_REACHED_MAX_DISTANCE = (DELTA_X < distance) && (DELTA_Y < distance);
+            // checks we are still inside the array
+            final boolean ARE_INSIDE_ARRAY = ((DELTA_X < SIZE) && (DELTA_Y < SIZE));
+
+            // ...if the neighbouring pixel is black, and we haven't reached the maximum allowed distance yet
+            if (isBlack(neighbours, currentNeighbour)
+                    && HAVE_NOT_REACHED_MAX_DISTANCE
+                    && ARE_INSIDE_ARRAY) {
+
+                // remembers that a trail has been found
+                trailFound = true;
+
+                // ...gets its coordinates relative to the current pixel
+                Integer[] relativeCoordinates = relativeNeighbourCoords.get(currentNeighbour);
+
+                // converts these to absolute coordinates along the image
+                int absoluteX = curX + relativeCoordinates[1];
+                int absoluteY = curY + relativeCoordinates[0];
+
+                // if the selected pixel is already a part of the path...
+                if (connectedPixels[absoluteY][absoluteX] == connectedPixels[curY][curX]) {
+                    // ...disregards it
+                    return;
+                }
+
+                // updates the value of the current coordinates
+                currentCoords = new int[]{absoluteY, absoluteX};
+
+                // continues the trail from the current pixel
+                trail(connectedPixels, image, originalCoords, currentCoords, distance);
+            }
+        }
+    }
+
+    // endregion
 
     /**
     * Computes the slope of a minutia using linear regression.

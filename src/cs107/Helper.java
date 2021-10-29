@@ -88,6 +88,10 @@ public final class Helper {
     return writeARGB(path, fromBinary(array));
   }
 
+  public static int toARGB(int A, int R, int G, int B) {
+    return A<<24 | R<<16 | G<<8 | B;
+  }
+
   /**
    * Writes specified image to disk.
    *
