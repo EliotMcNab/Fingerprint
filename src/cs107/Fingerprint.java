@@ -1,5 +1,8 @@
 package cs107;
 
+import jdk.jshell.execution.Util;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -47,7 +50,7 @@ public class Fingerprint {
      * @param row y-coordinates of the pixel
      * @param col x-coordinates of the pixel
      * @return whether the pixel is black
-     * @// TODO: 28.10.21 add index checking functionalities to fully-fledged image class
+     * @ TODO: 28.10.21 add index checking functionalities to fully-fledged image class
      */
     public static boolean isBlack(boolean[][] image, int row, int col) {
 
@@ -559,6 +562,9 @@ public class Fingerprint {
     */
     public static boolean[][] thin(boolean[][] image) {
 
+        // debug images for each thinning step
+        ArrayList<boolean[][]> debugImages = new ArrayList<>();
+
         // the dimensions of the image
         final int IMAGE_HEIGHT = image.length;
         final int IMAGE_WIDTH  = image[0].length;
@@ -580,16 +586,19 @@ public class Fingerprint {
             previousImage = thinningStep(currentImage, 1); // step 1
             currentImage = thinningStep(previousImage, 0); // step 2
 
-            /*// generates up to the first 20 steps in thinning the fingerprint
+            // generates up to the first 20 steps in thinning the fingerprint
             if (i < 20) {
                 // saves the 1st step
-                Helper.writeBinary("./debug_fingerprints/debug_skeleton" + i + ".png", previousImage);
+                debugImages.add(previousImage);
                 i++;
                 // saves the 2nd step
-                Helper.writeBinary("./debug_fingerprints/debug_skeleton" + i + ".png", currentImage);
+                debugImages.add(currentImage);
                 i++;
-            }*/
+            }
         }
+
+        // generates a debug image based on all the steps taken in thinning the fingerprint
+        createDebugImage(debugImages);
 
         // returns the thinned image
         return currentImage;
@@ -606,6 +615,62 @@ public class Fingerprint {
             // ...and copies its content
             copy[y] = Arrays.copyOf(original[y], ORIGINAL_WIDTH);
         }
+    }
+
+    private static void emphasizeDifferences(int[][] original, int[][] toCompare) {
+
+        // the size of the image
+        final int IMAGE_HEIGHT = original.length;
+        final int IMAGE_WIDTH = original[0].length;
+
+        // loops through every row of the image...
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+            // ...and every pixel for that row
+            for (int x = 0; x < IMAGE_WIDTH; x++) {
+                // ...if the pixels in both images are the same, and they are black
+                /*if (original[y][x] == toCompare[y][x] && original[y][x] == "fff") {
+                    // ...dims them
+                    original[y][x] =
+                }*/
+
+                // ...if the pixels in both images are different...
+//                if (original[y][x] != toCompare )
+            }
+        }
+    }
+
+    private static void createDebugImage(ArrayList<boolean[][]> debugImages) {
+
+        // the number of debug images
+        final int NUM_IMAGES = debugImages.size();
+
+        // the size of each individual debug image
+        final int IMAGE_HEIGHT = debugImages.get(0).length;
+        final int IMAGE_WIDTH = debugImages.get(0)[0].length;
+
+        // the width of the final image
+        final int FINAL_IMAGE_WIDTH = IMAGE_WIDTH * NUM_IMAGES;
+
+        // formatted debug image
+        final boolean[][] FINAL_DEBUG_IMAGE = new boolean[IMAGE_HEIGHT][FINAL_IMAGE_WIDTH];
+
+        // adds every debug image end-to-end to the final image
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+            for (int x = 0; x < FINAL_IMAGE_WIDTH; x++) {
+
+                // the current debug image to add
+                int currentImage = x / IMAGE_WIDTH;
+
+                // the index of the pixel to add from the debug image
+                int currentPixel = x % (IMAGE_WIDTH);
+
+                // adds the currently selected pixel to the final image
+                FINAL_DEBUG_IMAGE[y][x] = debugImages.get(currentImage)[y][currentPixel];
+            }
+        }
+
+        // saves the debug image under png format
+        Helper.writeBinary("debug_finderprints.png", FINAL_DEBUG_IMAGE);
     }
 
     /**

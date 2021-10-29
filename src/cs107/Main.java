@@ -98,7 +98,17 @@ public class Main {
 
     // endregion
 
-    testDrawSkeleton("1_1"); //draw skeleton of fingerprint 1_1.png
+    /*int[][] test = new int[2][255];
+
+    for (int y = 0; y < 2; y++) {
+      for (int x = 0; x < 255; x++) {
+        test[y][x] = x;
+      }
+    }
+
+    Helper.writeARGB("test.png", test);*/
+
+    //testDrawSkeleton("1_1"); //draw skeleton of fingerprint 1_1.png
     //testDrawSkeleton("1_2"); //draw skeleton of fingerprint 1_2.png
     //testDrawSkeleton("2_1"); //draw skeleton of fingerprint 2_1.png
 
