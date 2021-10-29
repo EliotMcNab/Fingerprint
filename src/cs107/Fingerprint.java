@@ -685,9 +685,67 @@ public class Fingerprint {
     *         <code>distance</code> and connected to the pixel at
     *         <code>(row, col)</code>.
     */
+
+    public static boolean [][]connected(boolean[][] image, int row, int col, int distance) {
+        int n = image.length;
+        int m = image[0].length;
+        boolean[][] connected_pixels = new boolean[n][m];
+
+        connected_pixels[row][col] = image[row][col];
+
+for (int k=0;k<n;k++ ) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            if ((image[i][j] == true) &&
+                    (hasBlackNeighbour(getNeighbours(connected_pixels, i, j))) &&
+                    (Math.abs(i - row) <= (distance)) &&
+                    (Math.abs(j - col) <=( distance))) {
+                connected_pixels[i][j] = true;
+            }
+        }
+    }
+
+}
+
+        return connected_pixels ;
+    }
+
     public static boolean[][] connectedPixels(boolean[][] image, int row, int col, int distance) {
       //TODO implement
-      return null;
+        int n=image.length ;
+        int m=image[0].length ;
+        boolean [][] connected_pixels= new boolean [n][m];
+
+
+
+
+
+
+        connected_pixels=connected(image,row ,col,distance);
+
+        do {
+
+                for (int i = 0; i < n; i++) {
+                    for (int j = 0; j < m; j++) {
+                        image[i][j] = connected_pixels[i][j];
+                    }
+                }
+
+            connected_pixels=connected(image,row ,col,distance);
+        }while (identical(image,connected_pixels)==false);
+
+
+
+
+
+
+        return connected_pixels;
+    }
+    public static boolean hasBlackNeighbour(boolean[] blackNeighbours){
+        for (int i=0;i<blackNeighbours.length;i++){
+            if (blackNeighbours[i]==true) return true;
+        }
+        return false;
     }
 
     /**
@@ -699,9 +757,88 @@ public class Fingerprint {
     * @param col             the col of the minutia.
     * @return the slope.
     */
+    public static double sumSquaresX(boolean[][] connectedPixels,int row,int col){
+        double sum=0;
+        int n=connectedPixels.length ;
+        int m=connectedPixels[0].length ;
+        for (int i=0 ;i<n;i++){
+            for (int j=0 ; j<m ;j++){
+                if(connectedPixels[i][j]==true){
+                    sum=sum+(j-col)*(j-col);
+                }
+            }
+        }
+
+
+        return sum;
+    }
+    public static double sumSquaresY(boolean[][] connectedPixels,int row,int col){
+        double sum=0;
+        int n=connectedPixels.length ;
+        int m=connectedPixels[0].length ;
+        for (int i=0 ;i<n;i++){
+            for (int j=0 ; j<m ;j++){
+                if(connectedPixels[i][j]==true){
+                    sum=sum+(row-i)*(row-i);
+                }
+            }
+        }
+
+
+        return sum;
+    }
+    public static boolean isVertical(boolean[][] connectedPixels, int row, int col){
+        int n=connectedPixels.length ;
+        int m=connectedPixels[0].length ;
+        for (int i=0 ;i<n;i++){
+            for (int j=0 ; j<col ;j++){
+                if(connectedPixels[i][j]==true){
+                    return false;
+                }
+            }
+        }
+        for (int i=0 ;i<n;i++){
+            for (int j=col+1 ; j<m ;j++){
+                if(connectedPixels[i][j]==true){
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+
+
     public static double computeSlope(boolean[][] connectedPixels, int row, int col) {
       //TODO implement
-      return 0;
+        double X=sumSquaresX(connectedPixels, row,  col);
+        double Y=sumSquaresY(connectedPixels, row,  col);
+        double a=0 ;
+        double sum=0;
+        int n=connectedPixels.length ;
+        int m=connectedPixels[0].length ;
+        if (isVertical( connectedPixels, row, col)==false){
+        for (int i=0 ;i<n;i++){
+            for (int j=0 ; j<m ;j++){
+                if(connectedPixels[i][j]==true){
+                    sum=sum+(row-i)*(j-col);
+                }
+            }
+        }
+    if (X>=Y){
+        a=sum/X;
+        }
+    else {
+        a=Y/sum;
+    }
+
+
+
+
+      return a;}
+        else {
+            return Double.POSITIVE_INFINITY;
+        }
     }
 
     /**
