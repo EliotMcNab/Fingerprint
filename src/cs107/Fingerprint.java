@@ -591,35 +591,44 @@ public class Fingerprint {
         // for debug purposes, used to generate an image of the fingerprint for each thinning step taken
         int i = 0;
 
+        int[][] previousImageInt = new int[IMAGE_HEIGHT][IMAGE_WIDTH];
+        int[][] currentImageInt  = new int[IMAGE_HEIGHT][IMAGE_WIDTH];
+
         // while we can still apply some thinning to the image...
         while (!identical(previousImage, currentImage)) {
 
-            // applies thinning to the image
+            // applies 1st step of thinning to the image
             previousImage = thinningStep(currentImage, 1); // step 1
+
+            // emphasises step 1 in thinning
+            previousImageInt = Helper.fromBinary(previousImage);
+            currentImageInt = Helper.fromBinary(currentImage);
+
+            emphasizeDifferences(currentImageInt, previousImageInt);
+
+            // saves the 1st step
+            debugImages.add(currentImageInt);
+            i++;
+
+            // applies 2nd step of thinning to the image
             currentImage = thinningStep(previousImage, 0); // step 2
 
-            // generates up to the first 20 steps in thinning the fingerprint
-            if (i < 20) {
+            // emphasises step 2 in thinning
+            previousImageInt = Helper.fromBinary(previousImage);
+            currentImageInt = Helper.fromBinary(currentImage);
 
-                int[][] previousImageInt = Helper.fromBinary(previousImage);
-                int[][] currentImageInt = Helper.fromBinary(currentImage);
+            emphasizeDifferences(previousImageInt, currentImageInt);
 
-                emphasizeDifferences(previousImageInt, currentImageInt);
-
-                // saves the 1st step
-                debugImages.add(previousImageInt);
-                i++;
-                // saves the 2nd step
-                debugImages.add(currentImageInt);
-                i++;
-            }
+            // saves the 2nd step
+            debugImages.add(previousImageInt);
+            i++;
         }
 
-        // y:3 x:2
-        final boolean[][] connectedPixels = connectedPixels(currentImage, 13, 1, 10);
-        //final boolean[][] connectedPixels = connectedPixels(currentImage, 3, 2, 40);
+        // final boolean[][] optimizedConnectedPixels = connectedPixels(currentImage, 21, 3, 2);
+        //final boolean[][] optimizedConnectedPixels = connectedPixels(currentImage, 12, 2, 300);
 
-        Helper.writeBinary("test_connected_pixels.png", connectedPixels);
+        final boolean[][] optimizedConnectedPixels = connectedPixels(currentImage, 3, 2, 8);
+        Helper.writeBinary("test_connected_pixels.png", optimizedConnectedPixels);
 
         // generates a debug image based on all the steps taken in thinning the fingerprint
         createDebugImage(debugImages);
@@ -712,15 +721,8 @@ public class Fingerprint {
     */
     public static boolean[][] connectedPixels(boolean[][] image, int row, int col, int distance) {
 
-        // the width of the square area to search
-        final int SEARCH_AREA = distance * 2 + 1;
-
         // the pixels connected to the minutia within the search area
-        final boolean[][] CONNECTED_PIXELS = new boolean[SEARCH_AREA][SEARCH_AREA];
-
-        for (boolean[] pixelRow : CONNECTED_PIXELS) {
-            Arrays.fill(pixelRow, false);
-        }
+        ArrayList<Integer[]> CONNECTED_PIXELS = new ArrayList<>();
 
         // the original coordinates
         final int[] ORIGINAL_COORDS = new int[]{row, col};
@@ -731,13 +733,17 @@ public class Fingerprint {
         // creates a trail of connected pixels within the specified distance
         trail(CONNECTED_PIXELS, image, ORIGINAL_COORDS, currentCords, distance);
 
+        // return CONNECTED_PIXELS;
+
         // returns the final array of connected pixels
-        return CONNECTED_PIXELS;
+        return optimizedCoordinates(CONNECTED_PIXELS, distance);
+
+        // return new boolean[][]{{true, false},{true, false}};
     }
 
     // region connectedPixels helper methods
 
-    private static void trail(boolean[][] connectedPixels, boolean[][] image,
+    /*private static void trail(boolean[][] connectedPixels, boolean[][] image,
                               int[] originalCoords, int[] currentCoords,
                               int distance) {
 
@@ -758,17 +764,8 @@ public class Fingerprint {
         // the number of surrounding pixels
         final int NUM_NEIGHBOURS = neighbours.length;
 
-        // whether a trail has been found
-        boolean trailFound = false;
-
         // loops through every neighbour...
         for (int currentNeighbour = 0; currentNeighbour < NUM_NEIGHBOURS; currentNeighbour++) {
-
-            // if a trail has been found...
-            if (trailFound) {
-                // ...exits the for loop
-                break;
-            }
 
             // the size of the connectedPixels Array
             final int SIZE = connectedPixels.length;
@@ -786,9 +783,6 @@ public class Fingerprint {
             if (isBlack(neighbours, currentNeighbour)
                     && HAVE_NOT_REACHED_MAX_DISTANCE
                     && ARE_INSIDE_ARRAY) {
-
-                // remembers that a trail has been found
-                trailFound = true;
 
                 // ...gets its coordinates relative to the current pixel
                 Integer[] relativeCoordinates = relativeNeighbourCoords.get(currentNeighbour);
@@ -810,6 +804,165 @@ public class Fingerprint {
                 trail(connectedPixels, image, originalCoords, currentCoords, distance);
             }
         }
+    }*/
+
+    private static void trail(ArrayList<Integer[]> connectedPixels, boolean[][] image,
+                              int[] originalCoords, int[] currentCoords,
+                              int distance) {
+
+        // gets the original coordinates
+        int originalX = originalCoords[1];
+        int originalY = originalCoords[0];
+
+        // gets the current coordinates
+        int curX = currentCoords[1];
+        int curY = currentCoords[0];
+
+        // stars the trail at the first pixel
+        connectedPixels.add(new Integer[]{curY, curX});
+
+        // gets the value of the neighbouring pixels
+        boolean[] neighbours = getNeighbours(image, curY, curX);
+
+        // the number of surrounding pixels
+        final int NUM_NEIGHBOURS = neighbours.length;
+
+        // loops through every neighbour...
+        for (int currentNeighbour = 0; currentNeighbour < NUM_NEIGHBOURS; currentNeighbour++) {
+
+            // the size of the area to check Array
+            final int SIZE = distance * 2 +1;
+
+            // the difference in x and y coordinates
+            final int DELTA_X = curX - originalX;
+            final int DELTA_Y = curY - originalY;
+
+            // checks that we have not reached the maximum allowed distance
+            final boolean HAVE_NOT_REACHED_MAX_DISTANCE = (DELTA_X < distance) && (DELTA_Y < distance);
+            // checks we are still inside the array
+            final boolean ARE_INSIDE_ARRAY = ((DELTA_X < SIZE) && (DELTA_Y < SIZE));
+
+            // ...if the neighbouring pixel is black, and we haven't reached the maximum allowed distance yet
+            if (isBlack(neighbours, currentNeighbour)
+                    && HAVE_NOT_REACHED_MAX_DISTANCE
+                    && ARE_INSIDE_ARRAY) {
+
+                // ...gets its coordinates relative to the current pixel
+                Integer[] relativeCoordinates = relativeNeighbourCoords.get(currentNeighbour);
+
+                // converts these to absolute coordinates along the image
+                int absoluteX = curX + relativeCoordinates[1];
+                int absoluteY = curY + relativeCoordinates[0];
+
+                // updates the value of the current coordinates
+                currentCoords = new int[]{absoluteY, absoluteX};
+
+                // if the selected pixel is already a part of the path...
+                if (isAlreadyPartOfTrail(connectedPixels, currentCoords)) {
+                    // ...disregards it
+                    return;
+                }
+
+                // continues the trail from the current pixel
+                trail(connectedPixels, image, originalCoords, currentCoords, distance);
+            }
+        }
+    }
+
+    public static boolean[][] optimizedCoordinates(ArrayList<Integer[]> connectedPixels, int distance) {
+
+        // gets the minimal and maximal y-coordinate in the trail
+        int minY = Integer.MAX_VALUE;
+        int maxY = 0;
+
+        for (Integer[] pixelCoordinates : connectedPixels) {
+            // if the current y-coordinate is smaller than the previous minimum...
+            if (pixelCoordinates[0] < minY) {
+                // ...considers it as the new minimum
+                minY = pixelCoordinates[0];
+            }
+
+            // if the current y-coordinate is bigger than the previous maximum...
+            if (pixelCoordinates[0] > maxY) {
+                // ...considers it as the new maximum
+                maxY = pixelCoordinates[0];
+            }
+        }
+
+        // gets the minimal and maximal x-coordinate in the trail
+        int minX = Integer.MAX_VALUE;
+        int maxX = 0;
+
+        for (Integer[] pixelCoordinates : connectedPixels) {
+            // if the current x-coordinate is smaller than the previous minimum...
+            if (pixelCoordinates[1] < minX) {
+                // ...considers it as a nex minimum
+                minX = pixelCoordinates[1];
+            }
+
+            // if the current x-coordinate is bigger than the previous maximum...
+            if (pixelCoordinates[1] > maxX) {
+                maxX = pixelCoordinates[1];
+            }
+        }
+        
+        // adjusts the y-coordinates
+        int finalMinY = minY;
+        connectedPixels.stream().forEach(y -> y[0] -= finalMinY);
+
+        // adjusts the x-coordinates
+        int finalMinX = minX;
+        connectedPixels.stream().forEach(x -> x[1] -= finalMinX);
+
+        // updates the max values
+        maxY -= minY;
+        maxX -= minX;
+
+        // saves the minimal coordinates in array form
+        final int[] MIN_COORDS = {minY, minX};
+        // saves the maximal coordinates in array form
+        final int[] MAX_COORDS = {maxY, maxX};
+
+        // return the trail in array form
+        return generateTrailArray(connectedPixels, MIN_COORDS, MAX_COORDS);
+    }
+
+    public static boolean[][] generateTrailArray(ArrayList<Integer[]> connectedPixels, int[] minCoords, int[] maxCoords) {
+
+        // gets the maximum coordinates
+        final int MAX_Y = maxCoords[0];
+        final int MAX_X = maxCoords[1];
+
+        // gets the minimum coordinates
+        final int MIN_Y = minCoords[0];
+        final int MIN_X = minCoords[1];
+
+        // the trail in array form
+        boolean[][] trailArray = new boolean[MAX_Y+1][MAX_X+1];
+        // traces the trail
+        connectedPixels.stream().forEach(c -> trailArray[c[0]][c[1]] = true);
+
+        // returns the trail in array form
+        return trailArray;
+    }
+
+    private static boolean isAlreadyPartOfTrail(ArrayList<Integer[]> connectedPixels, int[] currentCoords) {
+
+        final int CURRENT_X = currentCoords[1];
+        final int CURRENT_Y = currentCoords[0];
+
+        for (Integer[] pixelCoordinates : connectedPixels) {
+
+            int existingX = pixelCoordinates[1];
+            int existingY = pixelCoordinates[0];
+
+            if ((CURRENT_X == existingX) && (CURRENT_Y == existingY)) {
+                return true;
+            }
+
+        }
+
+        return false;
     }
 
     // endregion

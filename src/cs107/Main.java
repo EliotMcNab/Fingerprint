@@ -27,7 +27,7 @@ public class Main {
     //testOrientation();
     //testApplyRotation();
     //testApplyTranslation();
-    testThin();
+    //testThin();
     //testWithSkeleton();
 
     boolean[][] onlyTrue = new boolean[3][3];
@@ -122,7 +122,7 @@ public class Main {
 
     Helper.writeARGB("test.png", test);*/
 
-    //testDrawSkeleton("1_1"); //draw skeleton of fingerprint 1_1.png
+    testDrawSkeleton("1_1"); //draw skeleton of fingerprint 1_1.png
     //testDrawSkeleton("1_2"); //draw skeleton of fingerprint 1_2.png
     //testDrawSkeleton("2_1"); //draw skeleton of fingerprint 2_1.png
 
