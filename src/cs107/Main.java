@@ -55,6 +55,31 @@ public class Main {
     boolean[] neighboursPartial = Fingerprint.getNeighbours(partiallyTrue, 1, 1);
     boolean[] neighbours3 = Fingerprint.getNeighbours(partiallyTrue, 2, 2);
 
+    boolean[][] figure14 = {{false, false, true, false, false},
+                            {false, false, true, false, false},
+                            {false, false, true, false, false},
+                            {false, false, false, false, false}};
+
+    // test for vertical line of pixels with minutia at the bottom
+    /*final boolean[][] CONNECTED_PIXELS = Fingerprint.connectedPixels(figure14, 2, 2, 3);
+    final double slope = Fingerprint.computeSlope(CONNECTED_PIXELS, 2, 0);
+
+    System.out.printf("slope = %s\n", slope);
+
+    final double angle = Fingerprint.computeAngle(CONNECTED_PIXELS, 2, 0, slope);
+
+    System.out.printf("minutia angle = %s", angle);*/
+
+    // test for vertical line of pixels with minutia at the top
+    /*final boolean[][] CONNECTED_PIXELS = Fingerprint.connectedPixels(figure14, 0, 2, 3);
+    final double slope = Fingerprint.computeSlope(CONNECTED_PIXELS, 0, 0);
+
+    System.out.printf("slope = %s\n", slope);
+
+    final double angle = Fingerprint.computeAngle(CONNECTED_PIXELS, 0, 0, slope);
+
+    System.out.printf("minutia angle = %s", angle);*/
+
     // DEBUG displays test arrays
     /*for (boolean[] row : onlyFalse) {
       System.out.println(Arrays.toString(row));
@@ -100,16 +125,6 @@ public class Main {
 
     // region TEST
 
-    int[][] testARGB = new int[2][256];
-
-    for (int y = 0; y < testARGB.length; y++) {
-      for (int x = 0; x < testARGB[0].length; x++) {
-        testARGB[y][x] = Helper.toARGB(255, x, 0, 0);
-      }
-    }
-
-    Helper.writeARGB("test.png", testARGB);
-
     // endregion
 
     /*int[][] test = new int[2][255];
@@ -122,7 +137,7 @@ public class Main {
 
     Helper.writeARGB("test.png", test);*/
 
-    testDrawSkeleton("1_1"); //draw skeleton of fingerprint 1_1.png
+    //testDrawSkeleton("1_1"); //draw skeleton of fingerprint 1_1.png
     //testDrawSkeleton("1_2"); //draw skeleton of fingerprint 1_2.png
     //testDrawSkeleton("2_1"); //draw skeleton of fingerprint 2_1.png
 

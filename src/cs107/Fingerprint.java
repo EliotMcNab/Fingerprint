@@ -624,11 +624,9 @@ public class Fingerprint {
             i++;
         }
 
-        // final boolean[][] optimizedConnectedPixels = connectedPixels(currentImage, 21, 3, 2);
-        //final boolean[][] optimizedConnectedPixels = connectedPixels(currentImage, 12, 2, 300);
-
-        final boolean[][] optimizedConnectedPixels = connectedPixels(currentImage, 3, 2, 8);
-        Helper.writeBinary("test_connected_pixels.png", optimizedConnectedPixels);
+        // DEBUG TODO remove this once project is finished
+        final boolean[][] debugConnectedPixels = connectedPixels(currentImage, 3, 2, 8);
+        Helper.writeBinary("test_connected_pixels.png", debugConnectedPixels);
 
         // generates a debug image based on all the steps taken in thinning the fingerprint
         createDebugImage(debugImages);
@@ -733,79 +731,44 @@ public class Fingerprint {
         // creates a trail of connected pixels within the specified distance
         trail(CONNECTED_PIXELS, image, ORIGINAL_COORDS, currentCords, distance);
 
-        // return CONNECTED_PIXELS;
+        final boolean[][] OPTIMIZED_COORDINATES = optimizedCoordinates(CONNECTED_PIXELS, distance);
+
+        // DEBUG TODO remove this once project is finished
+        Helper.writeBinary("test_connected_pixels.png", OPTIMIZED_COORDINATES);
 
         // returns the final array of connected pixels
-        return optimizedCoordinates(CONNECTED_PIXELS, distance);
+        return OPTIMIZED_COORDINATES;
+    }
 
-        // return new boolean[][]{{true, false},{true, false}};
+    /**
+     * Computes <strong>only the coordinates</strong> of pixels that are connected to the pixel at coordinate
+     * <code>(row, col)</code> and within the given distance of the pixel.
+     * @param image    array containing each pixel's boolean value.
+     * @param row      the first coordinate of the pixel of interest.
+     * @param col      the second coordinate of the pixel of interest.
+     * @param distance the maximum distance at which a pixel is considered.
+     * @return list of coordinates of connected pixels
+     */
+    public static ArrayList<Integer[]> optimisedConnectedPixels(boolean[][] image, int row, int col, int distance) {
+        // the pixels connected to the minutia within the search area
+        ArrayList<Integer[]> CONNECTED_PIXELS = new ArrayList<>();
+
+        // creates a trail of connected pixels within the specified distance
+        trail(CONNECTED_PIXELS, image, row, col, distance);
+
+        return CONNECTED_PIXELS;
     }
 
     // region connectedPixels helper methods
 
-    /*private static void trail(boolean[][] connectedPixels, boolean[][] image,
-                              int[] originalCoords, int[] currentCoords,
-                              int distance) {
-
-        // gets the original coordinates
-        int originalX = originalCoords[1];
-        int originalY = originalCoords[0];
-
-        // gets the current coordinates
-        int curX = currentCoords[1];
-        int curY = currentCoords[0];
-
-        // stars the trail at the first pixel
-        connectedPixels[curY][curX] = true;
-
-        // gets the value of the neighbouring pixels
-        boolean[] neighbours = getNeighbours(image, curY, curX);
-
-        // the number of surrounding pixels
-        final int NUM_NEIGHBOURS = neighbours.length;
-
-        // loops through every neighbour...
-        for (int currentNeighbour = 0; currentNeighbour < NUM_NEIGHBOURS; currentNeighbour++) {
-
-            // the size of the connectedPixels Array
-            final int SIZE = connectedPixels.length;
-
-            // the difference in x and y coordinates
-            final int DELTA_X = curX - originalX;
-            final int DELTA_Y = curY - originalY;
-
-            // checks that we have not reached the maximum allowed distance
-            final boolean HAVE_NOT_REACHED_MAX_DISTANCE = (DELTA_X < distance) && (DELTA_Y < distance);
-            // checks we are still inside the array
-            final boolean ARE_INSIDE_ARRAY = ((DELTA_X < SIZE) && (DELTA_Y < SIZE));
-
-            // ...if the neighbouring pixel is black, and we haven't reached the maximum allowed distance yet
-            if (isBlack(neighbours, currentNeighbour)
-                    && HAVE_NOT_REACHED_MAX_DISTANCE
-                    && ARE_INSIDE_ARRAY) {
-
-                // ...gets its coordinates relative to the current pixel
-                Integer[] relativeCoordinates = relativeNeighbourCoords.get(currentNeighbour);
-
-                // converts these to absolute coordinates along the image
-                int absoluteX = curX + relativeCoordinates[1];
-                int absoluteY = curY + relativeCoordinates[0];
-
-                // if the selected pixel is already a part of the path...
-                if (connectedPixels[absoluteY][absoluteX] == connectedPixels[curY][curX]) {
-                    // ...disregards it
-                    return;
-                }
-
-                // updates the value of the current coordinates
-                currentCoords = new int[]{absoluteY, absoluteX};
-
-                // continues the trail from the current pixel
-                trail(connectedPixels, image, originalCoords, currentCoords, distance);
-            }
-        }
-    }*/
-
+    /**
+     * Gets the coordinates of all the neighbouring pixels to a starting pixel
+     * @param connectedPixels List to which all the neighbouring coordinates are saved
+     * @param image image containing the pixels
+     * @param originalCoords coordinates of the original pixel
+     * @param currentCoords coordinates of the pixel currently under consideration
+     * @param distance maximum search distance
+     */
     private static void trail(ArrayList<Integer[]> connectedPixels, boolean[][] image,
                               int[] originalCoords, int[] currentCoords,
                               int distance) {
@@ -867,6 +830,25 @@ public class Fingerprint {
                 trail(connectedPixels, image, originalCoords, currentCoords, distance);
             }
         }
+    }
+
+    /**
+     * Gets the coordinates of all the neighbouring pixels to a starting pixel
+     * @param connectedPixels List to which all the neighbouring coordinates are saved
+     * @param image image containing the pixels
+     * @param row y-coordinates of the starting pixel
+     * @param col x-coordinates of the starting pixel
+     * @param distance maximum search distance
+     */
+    private static void trail(ArrayList<Integer[]> connectedPixels, boolean[][] image,
+                              int row, int col, int distance) {
+
+        // saves row and col as the original and current coordinates
+        int[] originalCoordinates = {row, col};
+        int[] currentCoordinates = {row, col};
+
+        // calls the default trail method with these coordinates
+        trail(connectedPixels, image, originalCoordinates, currentCoordinates, distance);
     }
 
     public static boolean[][] optimizedCoordinates(ArrayList<Integer[]> connectedPixels, int distance) {
@@ -977,9 +959,91 @@ public class Fingerprint {
     * @return the slope.
     */
     public static double computeSlope(boolean[][] connectedPixels, int row, int col) {
-      //TODO implement
-      return 0;
+
+        // size of the image
+        final int IMAGE_HEIGHT = connectedPixels.length;
+        final int IMAGE_WIDTH = connectedPixels[0].length;
+
+        // various sums used in linear regression
+        int sumXY = 0;
+        int sumXX = 0;
+        int sumYY = 0;
+
+        // loops through every column of the connected pixels...
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+
+            // adjusts the y-value of the pixel
+            int imageY = adjustY(y, row);
+
+            // loops through every row of the connected pixels...
+            for (int x = 0; x < IMAGE_WIDTH; x++) {
+
+                // if the current pixel is black...
+                if (isBlack(connectedPixels, y, x)) {
+
+                    // ...adjusts the x-value of the pixel
+                    int imageX = adjustX(x, col);
+
+                    // ...and adds the pixels to the slope calculation
+                    sumXY += imageY * imageX;
+                    sumXX += imageX * imageX;
+                    sumYY += imageY * imageY;
+
+                }
+            }
+        }
+
+        // calculates the slope
+        return calculateSlope(sumXY, sumXX, sumYY);
     }
+
+    // region computeSlope helper methods
+
+    /**
+     * Converts a pixel's x-coordinate from array coordinates to image coordinates
+     * @param pixelColumn current pixel's x-coordinates
+     * @param minutiaColumn minutia's x-coordinates
+     * @return x-coordinates of the pixel relative to the image
+     */
+    public static int adjustX(int pixelColumn, int minutiaColumn) {
+        return pixelColumn - minutiaColumn;
+    }
+
+    /**
+     * Converts a pixel's y-coordinate from array coordinates to image coordinates
+     * @param pixelRow current pixel's y-coordinates
+     * @param minutiaRow minutia's y-coordinates
+     * @return y-coordinates of the pixel relative to the image
+     */
+    public static int adjustY(int pixelRow, int minutiaRow) {
+        return minutiaRow - pixelRow;
+    }
+
+    /**
+     * Handles the different cases for calculating the final slope of a line
+     * @param sumXY sum of the product of the x and y coordinates of every point along the line
+     * @param sumXX sum of the x coordinates squared of every point along the line
+     * @param sumYY sum of the y coordinates squared of every point along the line
+     * @return the slope of the line
+     */
+    private static double calculateSlope(int sumXY, int sumXX, int sumYY) {
+
+        // special case : if the line is vertical...
+        if (sumXX == 0) {
+            // ...it has infinite slope
+            return Double.POSITIVE_INFINITY;
+        }
+
+        // region DEBUG
+        // System.out.printf("sumXY = %s | sumXX = %s | sumYY = %s\n", sumXY, sumXX, sumYY);
+        // endregion
+
+        // calculates the slope of the line depending on the situation
+        return sumXX >= sumYY ?  (double)sumXY / sumXX : (double)sumYY / sumXY;
+
+    }
+
+    // endregion
 
     /**
     * Computes the orientation of a minutia in radians.
@@ -993,9 +1057,60 @@ public class Fingerprint {
     * @return the orientation of the minutia in radians.
     */
     public static double computeAngle(boolean[][] connectedPixels, int row, int col, double slope) {
-      //TODO implement
-      return 0;
+
+        // special case where the slope is that of a vertical line
+        if (slope == Double.POSITIVE_INFINITY && hasPixelBelow(connectedPixels, row))   return  Math.PI/2;
+        if (slope == Double.POSITIVE_INFINITY && hasPixelAbove(row))                    return -Math.PI/2;
+
+        // the coordinates of the connected pixels
+        ArrayList<Integer[]> pixelCoordinates = new ArrayList<>();
+        trail(pixelCoordinates, connectedPixels, row, col, connectedPixels.length/2 + 1);
+
+        // the number of pixels above and below the minutia
+        int pixelsAbove = 0, pixelsBelow = 0;
+
+        // loops through every pixel
+        for (Integer[] pixel : pixelCoordinates) {
+
+            // gets it's coordinates
+            int curX = pixel[1];
+            int curY = pixel[0];
+
+            // determines whether the pixel is above or below
+            if (isAbove(curY, curX, slope, row)) pixelsAbove++; else pixelsBelow++;
+        }
+
+        // calculates the angle without considering it's orientation
+        final double INDETERMINATE_ANGLE = Math.atan(slope);
+
+        // whether the angle is positive or negative
+        final boolean IS_POSITIVE_ANGLE = INDETERMINATE_ANGLE > 0;
+        final boolean IS_NEGATIVE_ANGLE = INDETERMINATE_ANGLE < 0;
+
+        // returns the angle with consideration for it's orientation
+        if (IS_POSITIVE_ANGLE && hasMorePixelsBelow(pixelsAbove, pixelsBelow)) return Math.PI + INDETERMINATE_ANGLE;
+        if (IS_NEGATIVE_ANGLE && hasMorePixelsAbove(pixelsAbove, pixelsBelow)) return Math.PI + INDETERMINATE_ANGLE;
+
+        // if no adjustments are needed
+        return INDETERMINATE_ANGLE;
     }
+
+    // region computeAngle helper methods
+
+    private static boolean isAbove(int row, int col, double slope, int minutiaRow) {
+        // whether the pixel is above the minutia
+        return row >= -col/slope;
+    }
+
+    private static boolean hasMorePixelsAbove(int pixelsAbove, int pixelsBelow) {
+        return pixelsAbove > pixelsBelow;
+    }
+
+    private static boolean hasMorePixelsBelow(int pixelsAbove, int pixelsBelow) {
+        return !hasMorePixelsAbove(pixelsAbove, pixelsBelow);
+    }
+
+    // endregion
 
     /**
     * Computes the orientation of the minutia that the coordinate <code>(row,
