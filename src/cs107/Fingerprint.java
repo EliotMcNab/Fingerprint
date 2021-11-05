@@ -11,33 +11,33 @@ import java.util.List;
  */
 public class Fingerprint {
 
-  /**
-   * The number of pixels to consider in each direction when doing the linear
-   * regression to compute the orientation.
-   */
-    public final int ORIENTATION_DISTANCE = 16;
+    /**
+     * The number of pixels to consider in each direction when doing the linear
+     * regression to compute the orientation.
+     */
+    public static final int ORIENTATION_DISTANCE = 16;
 
-  /**
-   * The maximum distance between two minutiae to be considered matching.
-   */
-    public final int DISTANCE_THRESHOLD = 5;
+    /**
+     * The maximum distance between two minutiae to be considered matching.
+     */
+    public static final int DISTANCE_THRESHOLD = 5;
 
-  /**
-   * The number of matching minutiae needed for two fingerprints to be considered
-   * identical.
-   */
-    public final int FOUND_THRESHOLD = 20;
+    /**
+     * The number of matching minutiae needed for two fingerprints to be considered
+     * identical.
+     */
+    public static final int FOUND_THRESHOLD = 20;
 
-  /**
-   * The distance between two angle to be considered identical.
-   */
-    public final int ORIENTATION_THRESHOLD = 20;
+    /**
+     * The distance between two angle to be considered identical.
+     */
+    public static final int ORIENTATION_THRESHOLD = 20;
 
-  /**
-   * The offset in each direction for the rotation to test when doing the
-   * matching.
-   */
-    public final int MATCH_ANGLE_OFFSET = 2;
+    /**
+     * The offset in each direction for the rotation to test when doing the
+     * matching.
+     */
+    public static final int MATCH_ANGLE_OFFSET = 2;
 
     // TODO implement properly as part of a custom image class
     private static void pixelOutOfBoundsError() {
@@ -438,6 +438,21 @@ public class Fingerprint {
 
         // returns the final number of transition
         return numTransitions;
+
+        /*
+        int transitions=0;
+        for (int i=0;i<neighbours.length-1;i++) {
+            if ((neighbours[i]==false)&&(neighbours[i+1]==true)) {
+                transitions++;
+            }
+            if ((neighbours[7]==false)&&(neighbours[0]==true)) {
+                transitions++;
+            }
+
+        }
+        return transitions;
+        */
+
     }
 
     /**
@@ -842,19 +857,73 @@ for (int k=0;k<n;k++ ) {
     }
 
     /**
-    * Computes the orientation of a minutia in radians.
-    *
-    * @param connectedPixels the result of
-    *                        {@link #connectedPixels(boolean[][], int, int, int)}.
-    * @param row             the row of the minutia.
-    * @param col             the col of the minutia.
-    * @param slope           the slope as returned by
-    *
-    * @return the orientation of the minutia in radians.
-    */
+     * Computes the orientation of a minutia in radians.
+     *
+     * @param connectedPixels the result of
+     *                        {@link #connectedPixels(boolean[][], int, int, int)}.
+     * @param row             the row of the minutia.
+     * @param col             the col of the minutia.
+     * @param slope           the slope as returned by
+     *
+     * @return the orientation of the minutia in radians.
+     *
+     */
+
     public static double computeAngle(boolean[][] connectedPixels, int row, int col, double slope) {
-      //TODO implement
-      return 0;
+
+        //TODO implement
+        int nb_pixels_below=0;
+        int nb_pixels_above=0;
+
+        int n= connectedPixels.length;
+        int m= connectedPixels[0].length;
+        double point_in_line;
+
+        if (slope!=0) {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < m; j++) {
+                    point_in_line = -(i - row) / slope - col;
+                    if ((connectedPixels[i][j] == true) && (j < point_in_line)) {
+                        nb_pixels_above++;
+
+                    }
+                    else if ((connectedPixels[i][j] == true) && (j >= point_in_line)) {
+                        nb_pixels_below++;
+                    }
+
+
+                }
+
+            }
+        }
+        else {
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < m; j++) {
+                    point_in_line = row;
+                    if ((connectedPixels[i][j] == true) && (i > point_in_line)) {
+                        nb_pixels_above++;
+
+                    } else if ((connectedPixels[i][j] == true) && (i < point_in_line)) {
+                        nb_pixels_below++;
+                    }
+                }
+            }
+        }
+
+
+        double angle=Math.atan(slope);
+        if ((slope==Double.POSITIVE_INFINITY)&&(nb_pixels_below<nb_pixels_above)){
+            angle=Math.PI/2;
+        }
+        else if ((slope==Double.POSITIVE_INFINITY)&&(nb_pixels_below>nb_pixels_above)){
+            angle=-Math.PI/2;
+        }
+        else if ((angle>0)&&(nb_pixels_below>nb_pixels_above)||(angle<0)&&(nb_pixels_below<nb_pixels_above)){
+            angle=angle+Math.PI ;
+        }
+
+
+        return angle;
     }
 
     /**
@@ -869,8 +938,21 @@ for (int k=0;k<n;k++ ) {
     * @return The orientation in degrees.
     */
     public static int computeOrientation(boolean[][] image, int row, int col, int distance) {
-      //TODO implement
-      return 0;
+        //TODO implement
+        boolean [][] connectedPixels =connectedPixels( image,  row,  col,  distance);
+
+        double slope=computeSlope(connectedPixels,row,col);
+        double angle=computeAngle(connectedPixels,row,col,slope);
+
+        angle=Math.toDegrees(angle);
+        if (angle<0){
+            angle=angle+360;
+        }
+        angle=Math.round(angle);
+
+
+
+        return (int) angle;
     }
 
     /**
@@ -883,8 +965,34 @@ for (int k=0;k<n;k++ ) {
     * @see #thin(boolean[][])
     */
     public static List<int[]> extract(boolean[][] image) {
-      //TODO implement
-      return null;
+
+        ArrayList<int[]> coordinates=new ArrayList<int[]>();
+
+        // size of the image
+        final int N = image.length;
+        final int M= image[0].length;
+
+        int angle ;
+
+        for (int i=1;i<N-1;i++){
+            for (int j=1;j<M-1;j++){
+
+                int numTransitions = transitions(getNeighbours(image,i,j));
+                
+                if((image[i][j]==true) && ((numTransitions == 1)||(numTransitions==3))){
+
+
+
+
+                    angle=computeOrientation(image,i,j,ORIENTATION_DISTANCE);
+                    coordinates.add(new int[]{i, j, angle});
+
+                }
+            }
+        }
+
+
+        return coordinates;
     }
 
     /**
@@ -897,8 +1005,22 @@ for (int k=0;k<n;k++ ) {
     * @return the minutia rotated around the given center.
     */
     public static int[] applyRotation(int[] minutia, int centerRow, int centerCol, int rotation) {
-      //TODO implement
-      return null;
+        //TODO implement
+        int row=minutia[0];
+        int col=minutia[1];
+        int orientation=minutia[2];
+        double rotation_rad=Math.toRadians(rotation);
+
+        int x = col-centerCol;
+
+        int    y = centerRow-row;
+        double newX = x * Math.cos(rotation_rad)-y * Math.sin(rotation_rad);
+        double newY = x * Math.sin(rotation_rad) + y * Math.cos(rotation_rad);
+        double newRow = centerRow-newY;
+        double   newCol = newX + centerCol;
+
+        double newOrientation = (orientation + rotation) % 360;
+        return (new int[]{(int)newRow, (int)newCol,(int) newOrientation});
     }
 
     /**
@@ -910,8 +1032,14 @@ for (int k=0;k<n;k++ ) {
     * @return the translated minutia.
     */
     public static int[] applyTranslation(int[] minutia, int rowTranslation, int colTranslation) {
-      //TODO implement
-      return null;
+        //TODO implement
+        int row=minutia[0];
+        int col=minutia[1];
+        int orientation=minutia[2];
+        int newRow = row-rowTranslation;
+        int    newCol = col-colTranslation;
+        int newOrientation = orientation;
+        return (new int[]{(int)newRow, (int)newCol,(int) newOrientation});
     }
 
     /**
@@ -927,9 +1055,12 @@ for (int k=0;k<n;k++ ) {
     * @return the transformed minutia.
     */
     public static int[] applyTransformation(int[] minutia, int centerRow, int centerCol, int rowTranslation,
-      int colTranslation, int rotation) {
-      //TODO implement
-      return null;
+                                            int colTranslation, int rotation) {
+        //TODO implement
+        int[] rotation_minutia=applyRotation(minutia, centerRow, centerCol, rotation);
+        int[] transformed_minutia=applyTranslation(rotation_minutia, rowTranslation, colTranslation);
+
+        return transformed_minutia;
     }
 
     /**
@@ -945,9 +1076,17 @@ for (int k=0;k<n;k++ ) {
     * @return the list of transformed minutiae.
     */
     public static List<int[]> applyTransformation(List<int[]> minutiae, int centerRow, int centerCol, int rowTranslation,
-      int colTranslation, int rotation) {
-      //TODO implement
-      return null;
+                                                  int colTranslation, int rotation) {
+
+        List <int[]> transformed_minutiae = new ArrayList<int[]>();
+        int size= minutiae.size();
+        for (int i=0;i<size;i++){
+            transformed_minutiae.add(applyTransformation(minutiae.get(i),centerRow,centerCol,rowTranslation, colTranslation, rotation) );
+
+        }
+
+
+        return transformed_minutiae;
     }
     /**
     * Counts the number of overlapping minutiae.
@@ -961,9 +1100,31 @@ for (int k=0;k<n;k++ ) {
     * @return the number of overlapping minutiae.
     */
     public static int matchingMinutiaeCount(List<int[]> minutiae1, List<int[]> minutiae2, int maxDistance,
-      int maxOrientation) {
-      //TODO implement
-      return 0;
+                                            int maxOrientation) {
+        //TODO implement
+        int size_one=minutiae1.size();
+        int size_two=minutiae2.size();
+        int nbMatches=0;
+        for(int i=0;i<size_one;i++){
+            for (int j=0;j<size_two;j++){
+                int row_one=minutiae1.get(i)[0];
+                int col_one=minutiae1.get(i)[1];
+                int orientation_one=minutiae1.get(i)[2];
+
+                int row_two=minutiae2.get(j)[0];
+                int col_two=minutiae2.get(j)[1];
+                int orientation_two=minutiae2.get(j)[2];
+
+                double distance=Math.sqrt((row_one-row_two)*(row_one-row_two)+(col_one-col_two)*(col_one-col_two));
+                double orientation_difference= Math.abs(orientation_one-orientation_two);
+
+                if ((distance<=maxDistance)&&(orientation_difference<=maxOrientation)){
+                    nbMatches++;
+                }
+
+            }
+        }
+        return nbMatches;
     }
 
     /**
@@ -975,7 +1136,29 @@ for (int k=0;k<n;k++ ) {
     *         otherwise.
     */
     public static boolean match(List<int[]> minutiae1, List<int[]> minutiae2) {
-      //TODO implement
-      return false;
+        //TODO implement
+        int size_one=minutiae1.size();
+        int size_two=minutiae2.size();
+        for (int i=0;i<size_one;i++) {
+            for (int j = 0; j < size_two; j++) {
+                int row_one = minutiae1.get(i)[0];
+                int col_one = minutiae1.get(i)[1];
+                int orientation_one = minutiae1.get(i)[2];
+
+                int row_two = minutiae2.get(j)[0];
+                int col_two = minutiae2.get(j)[1];
+                int orientation_two = minutiae2.get(j)[2];
+
+                int rotation=orientation_two-orientation_one;
+                for (int k=rotation-MATCH_ANGLE_OFFSET;k<=rotation-MATCH_ANGLE_OFFSET;k++) {
+                    List<int[]> transformed_minutiae= applyTransformation(minutiae2, row_one, col_one, row_two - row_one, col_two - col_one,k );
+                    int nbMatches=matchingMinutiaeCount(minutiae1, transformed_minutiae,  DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
+                    if (nbMatches>=FOUND_THRESHOLD){
+                        return true ;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }
