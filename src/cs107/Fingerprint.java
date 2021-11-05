@@ -1,8 +1,5 @@
 package cs107;
 
-import jdk.jshell.execution.Util;
-
-import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,6 +36,15 @@ public class Fingerprint {
      * matching.
      */
     public static final int MATCH_ANGLE_OFFSET = 2;
+
+    /**
+     * The color of the minutiae and their orientation as in the processImage method
+     */
+    public static final int MINUTIA_CIRCLE_COLOR = 0xff0000;
+    public static final int MINUTIA_CIRCLE_RADIUS = 5;
+
+    public static final int MINUTIA_LINE_COLOR = 0xff00ff;
+    public static final int MINUTIA_LINE_LENGTH = 10;
 
     // TODO implement properly as part of a custom image class
     private static void pixelOutOfBoundsError() {
@@ -730,30 +736,9 @@ for (int k=0;k<n;k++ ) {
       //TODO implement
         int n=image.length ;
         int m=image[0].length ;
-        boolean [][] connected_pixels= new boolean [n][m];
-
-
-
-
-
+        boolean [][] connected_pixels;
 
         connected_pixels=connected(image,row ,col,distance);
-
-        do {
-
-                for (int i = 0; i < n; i++) {
-                    for (int j = 0; j < m; j++) {
-                        image[i][j] = connected_pixels[i][j];
-                    }
-                }
-
-            connected_pixels=connected(image,row ,col,distance);
-        }while (identical(image,connected_pixels)==false);
-
-
-
-
-
 
         return connected_pixels;
     }
@@ -774,13 +759,19 @@ for (int k=0;k<n;k++ ) {
     * @return the slope.
     */
     public static double sumSquaresX(boolean[][] connectedPixels,int row,int col){
+
         double sum=0;
+
         int n=connectedPixels.length ;
         int m=connectedPixels[0].length ;
+
         for (int i=0 ;i<n;i++){
+
             for (int j=0 ; j<m ;j++){
+
                 if(connectedPixels[i][j]==true){
-                    sum=sum+(j-col)*(j-col);
+
+                    sum += (j-col)*(j-col);
                 }
             }
         }
@@ -789,13 +780,19 @@ for (int k=0;k<n;k++ ) {
         return sum;
     }
     public static double sumSquaresY(boolean[][] connectedPixels,int row,int col){
+
         double sum=0;
+
         int n=connectedPixels.length ;
         int m=connectedPixels[0].length ;
+
         for (int i=0 ;i<n;i++){
+
             for (int j=0 ; j<m ;j++){
+
                 if(connectedPixels[i][j]==true){
-                    sum=sum+(row-i)*(row-i);
+
+                    sum += (row-i)*(row-i);
                 }
             }
         }
@@ -823,38 +820,38 @@ for (int k=0;k<n;k++ ) {
         return true;
     }
 
-
-
     public static double computeSlope(boolean[][] connectedPixels, int row, int col) {
-      //TODO implement
-        double X=sumSquaresX(connectedPixels, row,  col);
-        double Y=sumSquaresY(connectedPixels, row,  col);
-        double a=0 ;
-        double sum=0;
-        int n=connectedPixels.length ;
-        int m=connectedPixels[0].length ;
-        if (isVertical( connectedPixels, row, col)==false){
-        for (int i=0 ;i<n;i++){
-            for (int j=0 ; j<m ;j++){
-                if(connectedPixels[i][j]==true){
-                    sum=sum+(row-i)*(j-col);
+
+        double X = sumSquaresX(connectedPixels, row, col);
+        double Y = sumSquaresY(connectedPixels, row, col);
+
+        double a = 0;
+        double sum = 0;
+
+        int n = connectedPixels.length;
+        int m = connectedPixels[0].length;
+
+        if (isVertical(connectedPixels, row, col)) {
+            return Double.POSITIVE_INFINITY;
+        }
+
+        for (int i = 0; i < n; i++) {
+
+            for (int j = 0; j < m; j++) {
+
+                if (connectedPixels[i][j] == true) {
+
+                    sum += (centerRow(i, row)) * (centerCol(j, col));
                 }
             }
         }
-    if (X>=Y){
-        a=sum/X;
+        if (X >= Y) {
+            a = sum / X;
+        } else {
+            a = Y / sum;
         }
-    else {
-        a=Y/sum;
-    }
 
-
-
-
-      return a;}
-        else {
-            return Double.POSITIVE_INFINITY;
-        }
+        return a;
     }
 
     /**
@@ -872,15 +869,51 @@ for (int k=0;k<n;k++ ) {
 
     public static double computeAngle(boolean[][] connectedPixels, int row, int col, double slope) {
 
-        //TODO implement
-        int nb_pixels_below=0;
-        int nb_pixels_above=0;
+        // special case : if the slope of the minutia is vertical
+        // if there are pixels above the minutia
+        // then it's angle is of PI/2
+        if (slope == Double.POSITIVE_INFINITY && hasPixelAbove(connectedPixels, row, col)) {
+            return Math.PI/2;
+        }
+        // if there are pixels below the minutia
+        // then it's angle is of -PI/2
+        if (slope == Double.POSITIVE_INFINITY && hasPixelBelow(connectedPixels, row, col)) {
+            return -Math.PI/2;
+        }
 
-        int n= connectedPixels.length;
-        int m= connectedPixels[0].length;
-        double point_in_line;
+        int pixelBelow = 0;
+        int pixelsAbove = 0;
 
-        if (slope!=0) {
+        final int IMAGE_HEIGHT = connectedPixels.length;
+        final int IMAGE_WIDTH  = connectedPixels[0].length;
+
+        // for every connected row...
+        for (int pixelRow = 0; pixelRow < IMAGE_HEIGHT; pixelRow++) {
+
+            // ...and every connected pixel...
+            for (int pixelCol = 0; pixelCol < IMAGE_WIDTH; pixelCol++) {
+
+                // ...checks if the pixel is black...
+                if (isBlack(connectedPixels, pixelRow, pixelCol)) {
+                    // ...and adjusts it's coordinates
+                    int adjustedRow = centerRow(pixelRow, col);
+                    int adjustedCol = centerCol(pixelCol, row);
+
+                    // if the pixel is above the minutia...
+                    if (isAbove(adjustedRow, adjustedCol, slope)) {
+                        // ...counts it among the pixels which are above
+                        pixelsAbove++;
+                    }
+                    // else if the pixel is below the minutia...
+                    else {
+                        // ...counts it among the pixels which are below
+                        pixelBelow++;
+                    }
+                }
+            }
+        }
+
+        /*if (slope!=0) {
             for (int i = 0; i < n; i++) {
                 for (int j = 0; j < m; j++) {
                     point_in_line = -(i - row) / slope - col;
@@ -909,22 +942,57 @@ for (int k=0;k<n;k++ ) {
                     }
                 }
             }
-        }
+        }*/
 
-
+        // calculates the angle of the minutia
         double angle=Math.atan(slope);
-        if ((slope==Double.POSITIVE_INFINITY)&&(nb_pixels_below<nb_pixels_above)){
-            angle=Math.PI/2;
-        }
-        else if ((slope==Double.POSITIVE_INFINITY)&&(nb_pixels_below>nb_pixels_above)){
-            angle=-Math.PI/2;
-        }
-        else if ((angle>0)&&(nb_pixels_below>nb_pixels_above)||(angle<0)&&(nb_pixels_below<nb_pixels_above)){
-            angle=angle+Math.PI ;
-        }
 
+        final boolean IS_POSITIVE_ANGLE = angle >= 0;
+        final boolean IS_NEGATIVE_ANGLE = angle < 0;
+
+        final boolean MORE_PIXELS_ABOVE = pixelsAbove >= pixelBelow;
+        final boolean MORE_PIXELS_BELOW = pixelBelow > pixelsAbove;
+
+        if ((IS_POSITIVE_ANGLE && MORE_PIXELS_BELOW) || (IS_NEGATIVE_ANGLE && MORE_PIXELS_ABOVE)){
+            angle += Math.PI ;
+        }
 
         return angle;
+    }
+
+    /**
+     * Centers a pixel's x-coordinates to a minutia
+     * @param pixelCol the pixel's x-coordinates
+     * @param minutiaCol the minutia's x-coordinates
+     * @return adjusted x-coordinates
+     */
+    private static int centerCol(int pixelCol, int minutiaCol) {
+        // centers the pixel
+        return pixelCol - minutiaCol;
+    }
+
+    /**
+     * Centers a pixel's y-coordinates to a minutia
+     * @param pixelRow the pixel's y-coordinates
+     * @param minutiaRow the minutia's y-coordinates
+     * @return adjusted y-coordinates
+     */
+    private static int centerRow(int pixelRow, int minutiaRow) {
+        // centers the pixel
+        return minutiaRow - pixelRow;
+    }
+
+    /**
+     * Determines whether a pixel is above a minutia
+     * @param row the pixel's y-coordinates
+     * @param col the pixel's x-coordinates
+     * @param slope the slope of the minutia
+     * @return true if the pixel is above or on the same level as the minutia, false otherwise
+     */
+    private static boolean isAbove(int row, int col, double slope) {
+        // determines if the pixel is above the minutia
+        return row >= -(col)/slope;
+
     }
 
     /**
@@ -971,7 +1039,7 @@ for (int k=0;k<n;k++ ) {
 
         // size of the image
         final int N = image.length;
-        final int M= image[0].length;
+        final int M = image[0].length;
 
         int angle ;
 
@@ -982,16 +1050,12 @@ for (int k=0;k<n;k++ ) {
                 
                 if((image[i][j]==true) && ((numTransitions == 1)||(numTransitions==3))){
 
-
-
-
                     angle=computeOrientation(image,i,j,ORIENTATION_DISTANCE);
                     coordinates.add(new int[]{i, j, angle});
 
                 }
             }
         }
-
 
         return coordinates;
     }
@@ -1165,22 +1229,84 @@ for (int k=0;k<n;k++ ) {
         return false;
     }
 
-    public static void processImage(boolean[][] image) {
+    public static boolean[][] getImage(String path) {
+        // gets the image from the specified path
+        return Helper.readBinary(path);
+    }
 
-        // gets the size of the origianl image
+    public static void processImage(boolean[][] image, String fileName) {
+
+        // gets the size of the original image
         final int IMAGE_HEIGHT = image.length;
         final int IMAGE_WIDTH = image[0].length;
 
         // creates a copy of the original image so as not to modify it
         boolean[][] imageCopy = new boolean[IMAGE_HEIGHT][IMAGE_WIDTH];
-
-        imageCopy =
+        copy2DArray(image, imageCopy);
 
         // applies thinning to the initial image
-        image = thin(image);
+        imageCopy = thin(image);
 
         // extracts the minutiae from the thinned image
-        List<int[]> minutiae = extract(image);
+        List<int[]> minutiae = extract(imageCopy);
 
+        // converts the copy of the image to ARGB format
+        int[][] ARGBImageCopy = Helper.fromBinary(imageCopy);
+
+        // makes the minutiae more visible on the final image
+        drawMinutia(ARGBImageCopy, minutiae);
+
+        // saves the final image to a png
+        Helper.writeARGB(fileName, ARGBImageCopy);
+
+
+    }
+
+    private static void drawMinutia(int[][] image, List<int[]> minutiae) {
+
+        // for every minutia which has been extracted...
+        for (int[] minutia : minutiae) {
+
+            // ...gets it's coordinates and angle
+            int minutiaRow      =    getMinutiaRow(minutia);
+            int minutiaCol      =    getMinutiaCol(minutia);
+            int minutiaAngle    =    getMinutiaAngle(minutia);
+
+            // draws a circle to indicate where the minutia is located
+            Helper.addCircle(image, minutiaRow, minutiaCol, MINUTIA_CIRCLE_RADIUS, MINUTIA_CIRCLE_COLOR);
+
+            // draws a line to indicate the angle of the minutia
+            Helper.addLine(image, minutiaRow, minutiaCol, minutiaAngle, MINUTIA_LINE_LENGTH, MINUTIA_LINE_COLOR);
+        }
+    }
+
+    /**
+     * Gets the column on which a minutia is located
+     * @param minutia current minutia
+     * @return x-coordinates of the minutia
+     */
+    private static int getMinutiaCol(int[] minutia) {
+        // gets the x-coordinates of the minutia
+        return minutia[1];
+    }
+
+    /**
+     * Gets the row on which a minutia is located
+     * @param minutia current minutia
+     * @return y-coordinates of the minutia
+     */
+    private static int getMinutiaRow(int[] minutia) {
+        // gets the y-coordinates of the minutia
+        return minutia[0];
+    }
+
+    /**
+     * Gets the angle orientation of a minutia
+     * @param minutia current minutia
+     * @return angle in degrees
+     */
+    private static int getMinutiaAngle(int[] minutia) {
+        // gets the minutia's angle in degrees
+        return minutia[2];
     }
 }

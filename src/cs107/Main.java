@@ -24,16 +24,20 @@ public class Main {
     //testConnectedPixels1();
     //testConnectedPixels2();
     //testConnectedPixels3();
-    testOrientation();
+    //testOrientation();
     //testApplyRotation();
     //testApplyTranslation();
     //testThin();
     //testWithSkeleton();
     //testCompareFingerprints("1_5", "2_3", true);
 
+    boolean[][] image = Fingerprint.getImage("resources/fingerprints/1_1.png");
+
+    Fingerprint.processImage(image, "debug_1_1.png");
+
     // region DEBUG
 
-    boolean[][] onlyTrue = new boolean[3][3];
+    /*boolean[][] onlyTrue = new boolean[3][3];
 
     for (boolean[] row : onlyTrue) {
       Arrays.fill(row, true);
@@ -52,7 +56,7 @@ public class Main {
     boolean[] neighboursFalse = Fingerprint.getNeighbours(onlyTrue, 1, 1);
     boolean[] neighboursTrue = Fingerprint.getNeighbours(onlyFalse, 1, 1);
     boolean[] neighboursPartial = Fingerprint.getNeighbours(partiallyTrue, 1, 1);
-    boolean[] neighbours3 = Fingerprint.getNeighbours(partiallyTrue, 2, 2);
+    boolean[] neighbours3 = Fingerprint.getNeighbours(partiallyTrue, 2, 2);*/
 
     // DEBUG displays test arrays
     /*for (boolean[] row : onlyFalse) {
@@ -131,9 +135,9 @@ public class Main {
     //testCompareAllFingerprints("1_1", 2, false);
 
     //compare 1_1 with all images of finger 3 to 16
-   // for (int f = 3; f <= 16; f++) {
-   //     testCompareAllFingerprints("1_1", f, false);
-   // }
+    //for (int f = 3; f <= 16; f++) {
+    //    testCompareAllFingerprints("1_1", f, false);
+    //}
   }
 
   /**
