@@ -2,6 +2,7 @@ package cs107;
 
 import jdk.jshell.execution.Util;
 
+import javax.swing.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -1032,7 +1033,6 @@ for (int k=0;k<n;k++ ) {
     * @return the translated minutia.
     */
     public static int[] applyTranslation(int[] minutia, int rowTranslation, int colTranslation) {
-        //TODO implement
         int row=minutia[0];
         int col=minutia[1];
         int orientation=minutia[2];
@@ -1056,7 +1056,6 @@ for (int k=0;k<n;k++ ) {
     */
     public static int[] applyTransformation(int[] minutia, int centerRow, int centerCol, int rowTranslation,
                                             int colTranslation, int rotation) {
-        //TODO implement
         int[] rotation_minutia=applyRotation(minutia, centerRow, centerCol, rotation);
         int[] transformed_minutia=applyTranslation(rotation_minutia, rowTranslation, colTranslation);
 
@@ -1150,9 +1149,13 @@ for (int k=0;k<n;k++ ) {
                 int orientation_two = minutiae2.get(j)[2];
 
                 int rotation=orientation_two-orientation_one;
+
                 for (int k=rotation-MATCH_ANGLE_OFFSET;k<=rotation-MATCH_ANGLE_OFFSET;k++) {
-                    List<int[]> transformed_minutiae= applyTransformation(minutiae2, row_one, col_one, row_two - row_one, col_two - col_one,k );
-                    int nbMatches=matchingMinutiaeCount(minutiae1, transformed_minutiae,  DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
+                    List<int[]> transformed_minutiae= applyTransformation(minutiae2, row_one, col_one,
+                                                                row_two - row_one,
+                                                                col_two - col_one,k );
+                    int nbMatches=matchingMinutiaeCount(minutiae1, transformed_minutiae,
+                                                        DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
                     if (nbMatches>=FOUND_THRESHOLD){
                         return true ;
                     }
@@ -1160,5 +1163,24 @@ for (int k=0;k<n;k++ ) {
             }
         }
         return false;
+    }
+
+    public static void processImage(boolean[][] image) {
+
+        // gets the size of the origianl image
+        final int IMAGE_HEIGHT = image.length;
+        final int IMAGE_WIDTH = image[0].length;
+
+        // creates a copy of the original image so as not to modify it
+        boolean[][] imageCopy = new boolean[IMAGE_HEIGHT][IMAGE_WIDTH];
+
+        imageCopy =
+
+        // applies thinning to the initial image
+        image = thin(image);
+
+        // extracts the minutiae from the thinned image
+        List<int[]> minutiae = extract(image);
+
     }
 }

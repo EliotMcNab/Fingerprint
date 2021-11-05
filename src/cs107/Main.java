@@ -31,6 +31,8 @@ public class Main {
     //testWithSkeleton();
     testCompareFingerprints("1_5", "2_3", true);
 
+    // region DEBUG
+
     boolean[][] onlyTrue = new boolean[3][3];
 
     for (boolean[] row : onlyTrue) {
@@ -44,12 +46,8 @@ public class Main {
     }
 
     boolean[][] partiallyTrue = new boolean[][]{{true, false, false},
-                                                {true, true, false},
-                                                {false, true, false}};
-
-
-
-    // region DEBUG
+            {true, true, false},
+            {false, true, false}};
 
     boolean[] neighboursFalse = Fingerprint.getNeighbours(onlyTrue, 1, 1);
     boolean[] neighboursTrue = Fingerprint.getNeighbours(onlyFalse, 1, 1);
