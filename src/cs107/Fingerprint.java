@@ -750,108 +750,97 @@ for (int k=0;k<n;k++ ) {
     }
 
     /**
-    * Computes the slope of a minutia using linear regression.
-    *
-    * @param connectedPixels the result of
-    *                        {@link #connectedPixels(boolean[][], int, int, int)}.
-    * @param row             the row of the minutia.
-    * @param col             the col of the minutia.
-    * @return the slope.
-    */
-    public static double sumSquaresX(boolean[][] connectedPixels,int row,int col){
+     * Computes the parameters needed for linear regression
+     * @param connectedPixels neighbouring pixel to selected minutia
+     * @param minutiaRow y-coordinates of the minutia
+     * @param minutiaCol x-coordinates of the minutia
+     * @return array of parameters needed to compute linear regression
+     * <list>
+     *     <li>0: sum(X²)</li>
+     *     <li>1: sum(Y²)</li>
+     *     <li>2: sum(X*Y)</li>
+     * </list>
+     */
+    public static int[] slopeParameters(boolean[][] connectedPixels, int minutiaRow, int minutiaCol){
 
-        double sum=0;
+        // the variable which will hold the parameters
+        // involved in computing the slope of a minutia
+        int[] parameters = new int[3];
 
-        int n=connectedPixels.length ;
-        int m=connectedPixels[0].length ;
+        // the variable which will hold the sum of the
+        // squares of the X-coordinates of each pixel
+        int sumXX = 0;
 
-        for (int i=0 ;i<n;i++){
+        // the variable which will hold the sum of the
+        // squares of the y-coordinates of each pixel
+        int sumYY = 0;
 
-            for (int j=0 ; j<m ;j++){
+        // the variable which will hold the sum of the
+        // x-coordinates and y-coordinates of each pixel
+        int sumXY = 0;
 
-                if(connectedPixels[i][j]==true){
+        // the size of the image
+        final int IMAGE_HEIGHT = connectedPixels.length ;
+        final int IMAGE_WIDTH  = connectedPixels[0].length ;
 
-                    sum += (j-col)*(j-col);
+        // for every row in the connected pixel...
+        for (int pixelRow = 0; pixelRow < IMAGE_HEIGHT; pixelRow++) {
+            // ...and every pixel in that row...
+            for (int pixelCol = 0; pixelCol < IMAGE_WIDTH; pixelCol++) {
+                // ...if the pixel is a black pixel...
+                if (isBlack(connectedPixels, pixelRow, pixelCol)) {
+
+                    // ...adjusts it's coordinates
+                    int X = centerCol(pixelCol, minutiaCol);
+                    int Y = centerRow(pixelRow, minutiaRow);
+
+                    // ...adds it's coordinates to each respective sum
+                    sumXX += X * X;
+                    sumYY += Y * Y;
+                    sumXY += X * Y;
                 }
             }
         }
 
+        // adds the final sums to the slope parameters
+        parameters[0] = sumXX;
+        parameters[1] = sumYY;
+        parameters[2] = sumXY;
 
-        return sum;
-    }
-    public static double sumSquaresY(boolean[][] connectedPixels,int row,int col){
-
-        double sum=0;
-
-        int n=connectedPixels.length ;
-        int m=connectedPixels[0].length ;
-
-        for (int i=0 ;i<n;i++){
-
-            for (int j=0 ; j<m ;j++){
-
-                if(connectedPixels[i][j]==true){
-
-                    sum += (row-i)*(row-i);
-                }
-            }
-        }
-
-
-        return sum;
-    }
-    public static boolean isVertical(boolean[][] connectedPixels, int row, int col){
-        int n=connectedPixels.length ;
-        int m=connectedPixels[0].length ;
-        for (int i=0 ;i<n;i++){
-            for (int j=0 ; j<col ;j++){
-                if(connectedPixels[i][j]==true){
-                    return false;
-                }
-            }
-        }
-        for (int i=0 ;i<n;i++){
-            for (int j=col+1 ; j<m ;j++){
-                if(connectedPixels[i][j]==true){
-                    return false;
-                }
-            }
-        }
-        return true;
+        return parameters;
     }
 
+    /**
+     * Computes the slope of a minutia using linear regression.
+     *
+     * @param connectedPixels the result of
+     *                        {@link #connectedPixels(boolean[][], int, int, int)}.
+     * @param row             the row of the minutia.
+     * @param col             the col of the minutia.
+     * @return the slope.
+     */
     public static double computeSlope(boolean[][] connectedPixels, int row, int col) {
 
-        double X = sumSquaresX(connectedPixels, row, col);
-        double Y = sumSquaresY(connectedPixels, row, col);
+        // the variable holding the slope of the minutia
+        double slope = 0;
 
-        double a = 0;
-        double sum = 0;
+        // gets the parameters needed for linear regression
+        int[] parameters = slopeParameters(connectedPixels, row, col);
 
-        int n = connectedPixels.length;
-        int m = connectedPixels[0].length;
+        final int SUM_XX = parameters[0];  // sum(X²)
+        final int SUM_YY = parameters[1];  // sum(Y²)
+        final int SUM_XY = parameters[2];  // sum(X*Y)
 
-        if (isVertical(connectedPixels, row, col)) {
-            return Double.POSITIVE_INFINITY;
+        // determines the slope of the minutia
+        if (SUM_XX >= SUM_YY) {
+            slope =  (double) SUM_XY / SUM_XX;
+        } else if (SUM_XX < SUM_YY) {
+            slope = (double) SUM_YY /  SUM_XY;
+        } else if (SUM_XX == 0) {                   // special case where the slope is vertical
+            slope = Double.POSITIVE_INFINITY;
         }
 
-        for (int i = 0; i < n; i++) {
-
-            for (int j = 0; j < m; j++) {
-
-                if (connectedPixels[i][j] == true) {
-
-                    sum += (centerRow(i, row)) * (centerCol(j, col));
-                }
-            }
-        }
-        if (X >= Y) {
-            a = sum / X;
-        } else {
-            a = Y / sum;
-        }
-
-        return a;
+        return slope;
     }
 
     /**
@@ -881,9 +870,11 @@ for (int k=0;k<n;k++ ) {
             return -Math.PI/2;
         }
 
+        // the number of pixels above and below the minutia
         int pixelBelow = 0;
         int pixelsAbove = 0;
 
+        // the size of the image
         final int IMAGE_HEIGHT = connectedPixels.length;
         final int IMAGE_WIDTH  = connectedPixels[0].length;
 
@@ -896,8 +887,8 @@ for (int k=0;k<n;k++ ) {
                 // ...checks if the pixel is black...
                 if (isBlack(connectedPixels, pixelRow, pixelCol)) {
                     // ...and adjusts it's coordinates
-                    int adjustedRow = centerRow(pixelRow, col);
-                    int adjustedCol = centerCol(pixelCol, row);
+                    int adjustedRow = centerRow(pixelRow, row);
+                    int adjustedCol = centerCol(pixelCol, col);
 
                     // if the pixel is above the minutia...
                     if (isAbove(adjustedRow, adjustedCol, slope)) {
@@ -913,48 +904,19 @@ for (int k=0;k<n;k++ ) {
             }
         }
 
-        /*if (slope!=0) {
-            for (int i = 0; i < n; i++) {
-                for (int j = 0; j < m; j++) {
-                    point_in_line = -(i - row) / slope - col;
-                    if ((connectedPixels[i][j] == true) && (j < point_in_line)) {
-                        nb_pixels_above++;
-
-                    }
-                    else if ((connectedPixels[i][j] == true) && (j >= point_in_line)) {
-                        nb_pixels_below++;
-                    }
-
-
-                }
-
-            }
-        }
-        else {
-            for (int i = 0; i < n; i++) {
-                for (int j = 0; j < m; j++) {
-                    point_in_line = row;
-                    if ((connectedPixels[i][j] == true) && (i > point_in_line)) {
-                        nb_pixels_above++;
-
-                    } else if ((connectedPixels[i][j] == true) && (i < point_in_line)) {
-                        nb_pixels_below++;
-                    }
-                }
-            }
-        }*/
-
         // calculates the angle of the minutia
-        double angle=Math.atan(slope);
+        double angle = Math.atan(slope);
 
+        // whether the minutia's angle is positive or negative
         final boolean IS_POSITIVE_ANGLE = angle >= 0;
         final boolean IS_NEGATIVE_ANGLE = angle < 0;
 
-        final boolean MORE_PIXELS_ABOVE = pixelsAbove >= pixelBelow;
-        final boolean MORE_PIXELS_BELOW = pixelBelow > pixelsAbove;
+        // whether the minutia has more pixels above or below it
+        final boolean MORE_PIXELS_ABOVE = pixelsAbove > pixelBelow;
+        final boolean MORE_PIXELS_BELOW = pixelBelow >= pixelsAbove;
 
         if ((IS_POSITIVE_ANGLE && MORE_PIXELS_BELOW) || (IS_NEGATIVE_ANGLE && MORE_PIXELS_ABOVE)){
-            angle += Math.PI ;
+            return angle + Math.PI ;
         }
 
         return angle;
@@ -990,9 +952,9 @@ for (int k=0;k<n;k++ ) {
      * @return true if the pixel is above or on the same level as the minutia, false otherwise
      */
     private static boolean isAbove(int row, int col, double slope) {
-        // determines if the pixel is above the minutia
-        return row >= -(col)/slope;
 
+        // determines if the pixel is above the minutia
+        return row >= -col/slope;
     }
 
     /**
@@ -1007,19 +969,19 @@ for (int k=0;k<n;k++ ) {
     * @return The orientation in degrees.
     */
     public static int computeOrientation(boolean[][] image, int row, int col, int distance) {
-        //TODO implement
-        boolean [][] connectedPixels =connectedPixels( image,  row,  col,  distance);
 
-        double slope=computeSlope(connectedPixels,row,col);
-        double angle=computeAngle(connectedPixels,row,col,slope);
+        boolean [][] connectedPixels = connectedPixels( image,  row,  col,  distance);
+
+        double slope = computeSlope(connectedPixels,row,col);
+        double angle = computeAngle(connectedPixels,row,col,slope);
 
         angle=Math.toDegrees(angle);
+
         if (angle<0){
-            angle=angle+360;
+            angle += 360;
         }
+
         angle=Math.round(angle);
-
-
 
         return (int) angle;
     }
@@ -1254,15 +1216,14 @@ for (int k=0;k<n;k++ ) {
         int[][] ARGBImageCopy = Helper.fromBinary(imageCopy);
 
         // makes the minutiae more visible on the final image
-        drawMinutia(ARGBImageCopy, minutiae);
+        Helper.drawMinutia(ARGBImageCopy, minutiae);
 
         // saves the final image to a png
         Helper.writeARGB(fileName, ARGBImageCopy);
 
-
     }
 
-    private static void drawMinutia(int[][] image, List<int[]> minutiae) {
+    /*private static void drawMinutia(int[][] image, List<int[]> minutiae) {
 
         // for every minutia which has been extracted...
         for (int[] minutia : minutiae) {
@@ -1278,7 +1239,7 @@ for (int k=0;k<n;k++ ) {
             // draws a line to indicate the angle of the minutia
             Helper.addLine(image, minutiaRow, minutiaCol, minutiaAngle, MINUTIA_LINE_LENGTH, MINUTIA_LINE_COLOR);
         }
-    }
+    }*/
 
     /**
      * Gets the column on which a minutia is located
