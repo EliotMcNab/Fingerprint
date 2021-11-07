@@ -29,13 +29,26 @@ public class Main {
     //testApplyTranslation();
     //testThin();
     //testWithSkeleton();
-    //testCompareFingerprints("1_5", "2_3", true);
+    // testCompareFingerprints("1_5", "2_3", true);
 
     boolean[][] image = Fingerprint.getImage("resources/fingerprints/1_1.png");
 
     Fingerprint.processImage(image, "debug_1_1.png");
 
+
+
     // region DEBUG
+
+    boolean[][] testArray   = new boolean[][]{{false, true, false},
+                                              {false, true, true},
+                                              {false, false, false}};
+
+    boolean[][] testArray2  = new boolean[][]{{false, false, false},
+                                              {true, true, true},
+                                              {false, false, false}};
+
+    System.out.println(Fingerprint.computeOrientation(testArray, 1, 0, 2));
+    System.out.println(Fingerprint.computeOrientation(testArray2, 1, 2, 2));
 
     /*boolean[][] onlyTrue = new boolean[3][3];
 
@@ -135,9 +148,9 @@ public class Main {
     //testCompareAllFingerprints("1_1", 2, false);
 
     //compare 1_1 with all images of finger 3 to 16
-    //for (int f = 3; f <= 16; f++) {
-    //    testCompareAllFingerprints("1_1", f, false);
-    //}
+    for (int f = 3; f <= 16; f++) {
+        testCompareAllFingerprints("1_1", f, false);
+    }
   }
 
   /**
