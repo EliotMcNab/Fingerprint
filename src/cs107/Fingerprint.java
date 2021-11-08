@@ -714,8 +714,25 @@ public class Fingerprint {
         boolean[][] connected_pixels = new boolean[n][m];
 
         connected_pixels[row][col] = image[row][col];
+       boolean[][] connected_inter = new boolean[n][m];
+       /* for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if ((image[i][j] == true) &&
+                        (hasBlackNeighbour(getNeighbours(connected_pixels, i, j))) &&
+                        (Math.abs(i - row) <= (distance)) &&
+                        (Math.abs(j - col) <=( distance))) {
+                    connected_pixels[i][j] = true;
+                }
+            }
+        } */
+do{
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < m; j++) {
+            connected_inter[i][j]=connected_pixels[i][j];
+        }
+    }
 
-for (int k=0;k<n;k++ ) {
+
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
             if ((image[i][j] == true) &&
@@ -727,7 +744,9 @@ for (int k=0;k<n;k++ ) {
         }
     }
 
-}
+
+
+} while(!identical(connected_inter,connected_pixels));
 
         return connected_pixels ;
     }
@@ -1131,10 +1150,12 @@ for (int k=0;k<n;k++ ) {
         int size_two=minutiae2.size();
         int nbMatches=0;
         for(int i=0;i<size_one;i++){
+
+            int row_one=minutiae1.get(i)[0];
+            int col_one=minutiae1.get(i)[1];
+            int orientation_one=minutiae1.get(i)[2];
+
             for (int j=0;j<size_two;j++){
-                int row_one=minutiae1.get(i)[0];
-                int col_one=minutiae1.get(i)[1];
-                int orientation_one=minutiae1.get(i)[2];
 
                 int row_two=minutiae2.get(j)[0];
                 int col_two=minutiae2.get(j)[1];
@@ -1165,10 +1186,13 @@ for (int k=0;k<n;k++ ) {
         int size_one=minutiae1.size();
         int size_two=minutiae2.size();
         for (int i=0;i<size_one;i++) {
+
+            int row_one = minutiae1.get(i)[0];
+            int col_one = minutiae1.get(i)[1];
+            int orientation_one = minutiae1.get(i)[2];
+
             for (int j = 0; j < size_two; j++) {
-                int row_one = minutiae1.get(i)[0];
-                int col_one = minutiae1.get(i)[1];
-                int orientation_one = minutiae1.get(i)[2];
+
 
                 int row_two = minutiae2.get(j)[0];
                 int col_two = minutiae2.get(j)[1];
@@ -1176,10 +1200,10 @@ for (int k=0;k<n;k++ ) {
 
                 int rotation=orientation_two-orientation_one;
 
-                for (int k=rotation-MATCH_ANGLE_OFFSET;k<=rotation-MATCH_ANGLE_OFFSET;k++) {
+                for (int angle=rotation-MATCH_ANGLE_OFFSET;angle<=rotation-MATCH_ANGLE_OFFSET;angle++) {
                     List<int[]> transformed_minutiae= applyTransformation(minutiae2, row_one, col_one,
                                                                 row_two - row_one,
-                                                                col_two - col_one,k );
+                                                                col_two - col_one,angle );
                     int nbMatches=matchingMinutiaeCount(minutiae1, transformed_minutiae,
                                                         DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
                     if (nbMatches>=FOUND_THRESHOLD){
