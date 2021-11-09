@@ -1191,11 +1191,21 @@ for (int k=0;k<n;k++ ) {
         return false;
     }
 
+    /**
+     * Converts an image to a boolean array
+     * @param path path (respective to Main.java) of the image
+     * @return image in array form
+     */
     public static boolean[][] getImage(String path) {
         // gets the image from the specified path
         return Helper.readBinary(path);
     }
 
+    /**
+     * Exports the array form of an image as a picture, emphasizing the minutiae and their orientation
+     * @param image the image in boolean array form
+     * @param fileName the name of the exported image
+     */
     public static void processImage(boolean[][] image, String fileName) {
 
         // gets the size of the original image
@@ -1222,24 +1232,6 @@ for (int k=0;k<n;k++ ) {
         Helper.writeARGB(fileName, ARGBImageCopy);
 
     }
-
-    /*private static void drawMinutia(int[][] image, List<int[]> minutiae) {
-
-        // for every minutia which has been extracted...
-        for (int[] minutia : minutiae) {
-
-            // ...gets it's coordinates and angle
-            int minutiaRow      =    getMinutiaRow(minutia);
-            int minutiaCol      =    getMinutiaCol(minutia);
-            int minutiaAngle    =    getMinutiaAngle(minutia);
-
-            // draws a circle to indicate where the minutia is located
-            Helper.addCircle(image, minutiaRow, minutiaCol, MINUTIA_CIRCLE_RADIUS, MINUTIA_CIRCLE_COLOR);
-
-            // draws a line to indicate the angle of the minutia
-            Helper.addLine(image, minutiaRow, minutiaCol, minutiaAngle, MINUTIA_LINE_LENGTH, MINUTIA_LINE_COLOR);
-        }
-    }*/
 
     /**
      * Gets the column on which a minutia is located
