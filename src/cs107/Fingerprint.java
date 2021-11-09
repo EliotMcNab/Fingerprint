@@ -880,22 +880,80 @@ do{
         // special case : if the slope of the minutia is vertical
         // if there are pixels above the minutia
         // then it's angle is of PI/2
-        if (slope == Double.POSITIVE_INFINITY && hasPixelAbove(connectedPixels, row, col)) {
+       /* if (slope == Double.POSITIVE_INFINITY && hasPixelAbove(connectedPixels, row, col)) {
             return Math.PI/2;
         }
         // if there are pixels below the minutia
         // then it's angle is of -PI/2
         if (slope == Double.POSITIVE_INFINITY && hasPixelBelow(connectedPixels, row, col)) {
             return -Math.PI/2;
+        }*/
+
+        // the size of the image
+        final int IMAGE_HEIGHT = connectedPixels.length;
+        final int IMAGE_WIDTH  = connectedPixels[0].length;
+
+        // case where the line is horizontal
+        if (slope == 0) {
+            int pixels_on_right = 0;
+            int pixels_on_left = 0;
+            for (int j = 0; j < col; j++) {
+                if (connectedPixels[row][j] == true) {
+                    pixels_on_left++;
+                }
+            }
+            for (int j = col + 1; j < IMAGE_WIDTH; j++) {
+                if (connectedPixels[row][j] == true) {
+                    pixels_on_right++;
+                }
+
+            }
+
+            if (pixels_on_left<pixels_on_right){
+                return 0;
+            }
+            if (pixels_on_left>pixels_on_right){
+                return Math.PI;
+            }
+
+
         }
 
         // the number of pixels above and below the minutia
         int pixelBelow = 0;
         int pixelsAbove = 0;
 
-        // the size of the image
-        final int IMAGE_HEIGHT = connectedPixels.length;
-        final int IMAGE_WIDTH  = connectedPixels[0].length;
+
+        //case where line is vertical
+        if (slope == Double.POSITIVE_INFINITY) {
+
+            for (int i = 0; i < row; i++) {
+                if (connectedPixels[i][col] == true) {
+                    pixelsAbove++;
+                }
+            }
+            for (int i = row+1; i < IMAGE_HEIGHT; i++) {
+                if (connectedPixels[i][col] == true) {
+                    pixelBelow++;
+                }
+            }
+
+            if (pixelBelow<pixelsAbove){
+                return Math.PI/2;
+            }
+            if (pixelBelow>pixelsAbove){
+                return -Math.PI/2;
+            }
+
+
+        }
+
+
+
+
+
+
+        //case where line is oblique
 
         // for every connected row...
         for (int pixelRow = 0; pixelRow < IMAGE_HEIGHT; pixelRow++) {
