@@ -607,92 +607,10 @@ public class Fingerprint {
             // applies thinning to the image
             previousImage = thinningStep(currentImage, 1); // step 1
             currentImage = thinningStep(previousImage, 0); // step 2
-
-            // generates up to the first 20 steps in thinning the fingerprint
-            if (i < 20) {
-                // saves the 1st step
-                debugImages.add(previousImage);
-                i++;
-                // saves the 2nd step
-                debugImages.add(currentImage);
-                i++;
-            }
         }
-
-        // generates a debug image based on all the steps taken in thinning the fingerprint
-        createDebugImage(debugImages);
 
         // returns the thinned image
         return currentImage;
-    }
-
-    private static void copy2DArray(boolean[][] original, boolean[][] copy) {
-
-        // size of the array
-        final int ORIGINAL_HEIGHT = original.length;
-        final int ORIGINAL_WIDTH = original[0].length;
-
-        // loops through every row in the array...
-        for (int y = 0; y < ORIGINAL_HEIGHT; y++) {
-            // ...and copies its content
-            copy[y] = Arrays.copyOf(original[y], ORIGINAL_WIDTH);
-        }
-    }
-
-    private static void emphasizeDifferences(int[][] original, int[][] toCompare) {
-
-        // the size of the image
-        final int IMAGE_HEIGHT = original.length;
-        final int IMAGE_WIDTH = original[0].length;
-
-        // loops through every row of the image...
-        for (int y = 0; y < IMAGE_HEIGHT; y++) {
-            // ...and every pixel for that row
-            for (int x = 0; x < IMAGE_WIDTH; x++) {
-                // ...if the pixels in both images are the same, and they are black
-                /*if (original[y][x] == toCompare[y][x] && original[y][x] == "fff") {
-                    // ...dims them
-                    original[y][x] =
-                }*/
-
-                // ...if the pixels in both images are different...
-//                if (original[y][x] != toCompare )
-            }
-        }
-    }
-
-    private static void createDebugImage(ArrayList<boolean[][]> debugImages) {
-
-        // the number of debug images
-        final int NUM_IMAGES = debugImages.size();
-
-        // the size of each individual debug image
-        final int IMAGE_HEIGHT = debugImages.get(0).length;
-        final int IMAGE_WIDTH = debugImages.get(0)[0].length;
-
-        // the width of the final image
-        final int FINAL_IMAGE_WIDTH = IMAGE_WIDTH * NUM_IMAGES;
-
-        // formatted debug image
-        final boolean[][] FINAL_DEBUG_IMAGE = new boolean[IMAGE_HEIGHT][FINAL_IMAGE_WIDTH];
-
-        // adds every debug image end-to-end to the final image
-        for (int y = 0; y < IMAGE_HEIGHT; y++) {
-            for (int x = 0; x < FINAL_IMAGE_WIDTH; x++) {
-
-                // the current debug image to add
-                int currentImage = x / IMAGE_WIDTH;
-
-                // the index of the pixel to add from the debug image
-                int currentPixel = x % (IMAGE_WIDTH);
-
-                // adds the currently selected pixel to the final image
-                FINAL_DEBUG_IMAGE[y][x] = debugImages.get(currentImage)[y][currentPixel];
-            }
-        }
-
-        // saves the debug image under png format
-        Helper.writeBinary("debug_finderprints.png", FINAL_DEBUG_IMAGE);
     }
 
     /**
@@ -859,6 +777,13 @@ do{
             slope = Double.POSITIVE_INFINITY;
         }
 
+        // if the slope approaches a large number...
+        if (Math.abs(slope) > 100) {
+            // ...also considers it to be vertical
+            slope = Double.POSITIVE_INFINITY;
+        }
+
+        // returns the final slope
         return slope;
     }
 
@@ -877,109 +802,33 @@ do{
 
     public static double computeAngle(boolean[][] connectedPixels, int row, int col, double slope) {
 
-        // special case : if the slope of the minutia is vertical
-        // if there are pixels above the minutia
-        // then it's angle is of PI/2
-       /* if (slope == Double.POSITIVE_INFINITY && hasPixelAbove(connectedPixels, row, col)) {
-            return Math.PI/2;
-        }
-        // if there are pixels below the minutia
-        // then it's angle is of -PI/2
-        if (slope == Double.POSITIVE_INFINITY && hasPixelBelow(connectedPixels, row, col)) {
-            return -Math.PI/2;
-        }*/
+        // whether the minutia has more pixels above or below it
+        final boolean MORE_PIXELS_ABOVE = hasMorePixelsAbove(connectedPixels, row, col, slope);
+        final boolean MORE_PIXELS_BELOW = !MORE_PIXELS_ABOVE;
 
-        // the size of the image
-        final int IMAGE_HEIGHT = connectedPixels.length;
-        final int IMAGE_WIDTH  = connectedPixels[0].length;
-
-        // case where the line is horizontal
-        if (slope == 0) {
-            int pixels_on_right = 0;
-            int pixels_on_left = 0;
-            for (int j = 0; j < col; j++) {
-                if (connectedPixels[row][j] == true) {
-                    pixels_on_left++;
-                }
-            }
-            for (int j = col + 1; j < IMAGE_WIDTH; j++) {
-                if (connectedPixels[row][j] == true) {
-                    pixels_on_right++;
-                }
-
-            }
-
-            if (pixels_on_left<pixels_on_right){
-                return 0;
-            }
-            if (pixels_on_left>pixels_on_right){
-                return Math.PI;
-            }
-
-
-        }
-
-        // the number of pixels above and below the minutia
-        int pixelBelow = 0;
-        int pixelsAbove = 0;
-
-
-        //case where line is vertical
+        // region SPECIAL CASE : minutia has a vertical slope
         if (slope == Double.POSITIVE_INFINITY) {
 
-            for (int i = 0; i < row; i++) {
-                if (connectedPixels[i][col] == true) {
-                    pixelsAbove++;
-                }
-            }
-            for (int i = row+1; i < IMAGE_HEIGHT; i++) {
-                if (connectedPixels[i][col] == true) {
-                    pixelBelow++;
-                }
-            }
-
-            if (pixelBelow<pixelsAbove){
-                return Math.PI/2;
-            }
-            if (pixelBelow>pixelsAbove){
+            if (MORE_PIXELS_ABOVE) {
+                return Math.PI / 2;
+            } else {
                 return -Math.PI/2;
             }
-
-
         }
+        // endregion
 
+        // region SPECIAL CASE : minutia has a horizontal slope
+        if (slope == 0) {
 
-
-
-
-
-        //case where line is oblique
-
-        // for every connected row...
-        for (int pixelRow = 0; pixelRow < IMAGE_HEIGHT; pixelRow++) {
-
-            // ...and every connected pixel...
-            for (int pixelCol = 0; pixelCol < IMAGE_WIDTH; pixelCol++) {
-
-                // ...checks if the pixel is black...
-                if (isBlack(connectedPixels, pixelRow, pixelCol)) {
-                    // ...and adjusts it's coordinates
-                    int adjustedRow = centerRow(pixelRow, row);
-                    int adjustedCol = centerCol(pixelCol, col);
-
-                    // if the pixel is above the minutia...
-                    if (isAbove(adjustedRow, adjustedCol, slope)) {
-                        // ...counts it among the pixels which are above
-                        pixelsAbove++;
-                    }
-                    // else if the pixel is below the minutia...
-                    else {
-                        // ...counts it among the pixels which are below
-                        pixelBelow++;
-                    }
-                }
+            // here pixels above refer to pixels to the right of the minutia
+            // while pixels below refer to those to the left of the minutia
+            if (MORE_PIXELS_ABOVE) {
+                return 0;
+            } else {
+                return Math.PI;
             }
         }
+        // endregion
 
         // calculates the angle of the minutia
         double angle = Math.atan(slope);
@@ -988,15 +837,89 @@ do{
         final boolean IS_POSITIVE_ANGLE = angle >= 0;
         final boolean IS_NEGATIVE_ANGLE = angle < 0;
 
-        // whether the minutia has more pixels above or below it
-        final boolean MORE_PIXELS_ABOVE = pixelsAbove > pixelBelow;
-        final boolean MORE_PIXELS_BELOW = pixelBelow >= pixelsAbove;
-
+        // adjusts the angle of the minutia if necessary
         if ((IS_POSITIVE_ANGLE && MORE_PIXELS_BELOW) || (IS_NEGATIVE_ANGLE && MORE_PIXELS_ABOVE)){
             return angle + Math.PI ;
         }
 
+        // returns the final angle (in radians) of the minutia
         return angle;
+    }
+
+    // region computeAngle helper methods
+
+    /**
+     * Determines if a minutia has more pixels above or below it
+     * @param connectedPixels pixels which are connected to the minutia
+     * @param row y-coordinates of the minutia
+     * @param col x-coordinates of the minutia
+     * @param slope slope of the minutia
+     * @return whether the minutia has more pixels above or below it
+     * @implNote if a minutia has a slope of 0, the pixel above refer to the pixels
+     * to the right if the minutia and the pixels below to those to the left of the minutia
+     */
+    private static boolean hasMorePixelsAbove(boolean[][] connectedPixels, int row, int col, double slope) {
+
+        // the number of pixels above and below the minutia
+        int pixelBelow = 0;
+        int pixelsAbove = 0;
+
+        // the size of the image
+        final int IMAGE_HEIGHT = connectedPixels.length;
+        final int IMAGE_WIDTH  = connectedPixels[0].length;
+
+        // for every connected row...
+        for (int pixelRow = 0; pixelRow < IMAGE_HEIGHT; pixelRow++) {
+
+            // ...and every connected pixel...
+            for (int pixelCol = 0; pixelCol < IMAGE_WIDTH; pixelCol++) {
+
+                // ...checks if the pixel is black
+                if (isBlack(connectedPixels, pixelRow, pixelCol)) {
+
+                    // SPECIAL CASE : the slope of the minutia is vertical
+                    if (itAboveVerticalSlope(slope, pixelRow, row)) pixelsAbove++;
+
+                    // SPECIAL CASE : the slope of the minutia is horizontal
+                    if (isRightOfHorizontalSlope(slope, pixelRow, row)) pixelsAbove++;
+
+                    // adjusts the pixel's coordinates
+                    int adjustedRow = centerRow(pixelRow, row);
+                    int adjustedCol = centerCol(pixelCol, col);
+
+                    // pixel is above the minutia
+                    if (isAbove(adjustedRow, adjustedCol, slope)) pixelsAbove++;
+
+                    // pixel is below the minutia
+                    else pixelBelow++;
+                }
+            }
+        }
+
+        // whether there are more pixels above the current minutia
+        return pixelsAbove >= pixelBelow;
+    }
+
+    /**
+     * Determines if a pixel is above a minutia with an infinite slope
+     * @param slope slope of the minutia
+     * @param pixelRow y-coordinates of the pixel
+     * @param minutiaRow y-coordinates of the minutia
+     * @return whether the pixel is above or below the minutia
+     */
+    private static boolean itAboveVerticalSlope(double slope, int pixelRow, int minutiaRow) {
+        return (slope == Double.POSITIVE_INFINITY) && (pixelRow < minutiaRow);
+    }
+
+    /**
+     * Determines if a pixel to the right of a minutia with a slope of 0
+     * @param slope slope of the minutia
+     * @param pixelCol x-coordinates of the pixel
+     * @param minutiaCol x-coordinates of the minutia
+     * @return whether the pixel is above or below the minutia
+     */
+    private static boolean isRightOfHorizontalSlope(double slope, int pixelCol, int minutiaCol) {
+        return (slope == 0) && (pixelCol > minutiaCol);
     }
 
     /**
@@ -1029,10 +952,11 @@ do{
      * @return true if the pixel is above or on the same level as the minutia, false otherwise
      */
     private static boolean isAbove(int row, int col, double slope) {
-
         // determines if the pixel is above the minutia
         return row >= -col/slope;
     }
+
+    // endregion
 
     /**
     * Computes the orientation of the minutia that the coordinate <code>(row,
@@ -1074,22 +998,23 @@ do{
     */
     public static List<int[]> extract(boolean[][] image) {
 
-        ArrayList<int[]> coordinates=new ArrayList<int[]>();
+        ArrayList<int[]> coordinates = new ArrayList<int[]>();
 
         // size of the image
-        final int N = image.length;
-        final int M = image[0].length;
+        final int IMAGE_HEIGHT = image.length;
+        final int IMAGE_WIDTH = image[0].length;
 
-        int angle ;
+        int angle;
 
-        for (int i=1;i<N-1;i++){
-            for (int j=1;j<M-1;j++){
+        for (int i=1;i<IMAGE_HEIGHT-1;i++){
+            for (int j=1;j<IMAGE_WIDTH-1;j++){
 
                 int numTransitions = transitions(getNeighbours(image,i,j));
                 
                 if((image[i][j]==true) && ((numTransitions == 1)||(numTransitions==3))){
 
                     angle=computeOrientation(image,i,j,ORIENTATION_DISTANCE);
+                    // if (angle == 270) System.out.println(angle);
                     coordinates.add(new int[]{i, j, angle});
 
                 }
@@ -1344,4 +1269,78 @@ do{
         // gets the minutia's angle in degrees
         return minutia[2];
     }
+
+    // region DEBUG METHODS
+
+    // TODO Make this work
+    private static void copy2DArray(boolean[][] original, boolean[][] copy) {
+
+        // size of the array
+        final int ORIGINAL_HEIGHT = original.length;
+        final int ORIGINAL_WIDTH = original[0].length;
+
+        // loops through every row in the array...
+        for (int y = 0; y < ORIGINAL_HEIGHT; y++) {
+            // ...and copies its content
+            copy[y] = Arrays.copyOf(original[y], ORIGINAL_WIDTH);
+        }
+    }
+
+    private static void emphasizeDifferences(int[][] original, int[][] toCompare) {
+
+        // the size of the image
+        final int IMAGE_HEIGHT = original.length;
+        final int IMAGE_WIDTH = original[0].length;
+
+        // loops through every row of the image...
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+            // ...and every pixel for that row
+            for (int x = 0; x < IMAGE_WIDTH; x++) {
+                // ...if the pixels in both images are the same, and they are black
+                /*if (original[y][x] == toCompare[y][x] && original[y][x] == "fff") {
+                    // ...dims them
+                    original[y][x] =
+                }*/
+
+                // ...if the pixels in both images are different...
+//                if (original[y][x] != toCompare )
+            }
+        }
+    }
+
+    private static void createDebugImage(ArrayList<boolean[][]> debugImages) {
+
+        // the number of debug images
+        final int NUM_IMAGES = debugImages.size();
+
+        // the size of each individual debug image
+        final int IMAGE_HEIGHT = debugImages.get(0).length;
+        final int IMAGE_WIDTH = debugImages.get(0)[0].length;
+
+        // the width of the final image
+        final int FINAL_IMAGE_WIDTH = IMAGE_WIDTH * NUM_IMAGES;
+
+        // formatted debug image
+        final boolean[][] FINAL_DEBUG_IMAGE = new boolean[IMAGE_HEIGHT][FINAL_IMAGE_WIDTH];
+
+        // adds every debug image end-to-end to the final image
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+            for (int x = 0; x < FINAL_IMAGE_WIDTH; x++) {
+
+                // the current debug image to add
+                int currentImage = x / IMAGE_WIDTH;
+
+                // the index of the pixel to add from the debug image
+                int currentPixel = x % (IMAGE_WIDTH);
+
+                // adds the currently selected pixel to the final image
+                FINAL_DEBUG_IMAGE[y][x] = debugImages.get(currentImage)[y][currentPixel];
+            }
+        }
+
+        // saves the debug image under png format
+        Helper.writeBinary("debug_finderprints.png", FINAL_DEBUG_IMAGE);
+    }
+
+    // endregion
 }

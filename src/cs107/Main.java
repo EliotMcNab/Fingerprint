@@ -26,16 +26,13 @@ public class Main {
     //testConnectedPixels3();
     //testOrientation();
     //testApplyRotation();
-    testApplyTranslation();
+    //testApplyTranslation();
     //testThin();
     //testWithSkeleton();
-    // testCompareFingerprints("1_5", "2_3", true);
 
-    boolean[][] image = Fingerprint.getImage("resources/fingerprints/1_1.png");
+    // boolean[][] image = Fingerprint.getImage("resources/fingerprints/1_8.png");
 
-    Fingerprint.processImage(image, "debug_1_1.png");
-
-
+    // Fingerprint.processImage(image, "debug_1_8.png");
 
     // region DEBUG
 
@@ -46,9 +43,6 @@ public class Main {
     boolean[][] testArray2  = new boolean[][]{{false, false, false},
                                               {true, true, true},
                                               {false, false, false}};
-
-    //System.out.println(Fingerprint.computeOrientation(testArray, 1, 0, 2));
-    //System.out.println(Fingerprint.computeOrientation(testArray2, 1, 2, 2));
 
     /*boolean[][] onlyTrue = new boolean[3][3];
 
@@ -129,30 +123,27 @@ public class Main {
     //testDrawSkeleton("2_1"); //draw skeleton of fingerprint 2_1.png
 
     //testDrawMinutiae("1_1"); //draw minutiae of fingerprint 1_1.png
-    //testDrawMinutiae("2_1"); //draw minutiae of fingerprint 2_1.png
-
     //testDrawMinutiae("1_2"); //draw minutiae of fingerprint 1_2.png
-    //testDrawMinutiae("1_6"); //draw minutiae of fingerprint 1_6.png
-    //testDrawMinutiae("1_8"); //draw minutiae of fingerprint 1_2.png
-
+    //testDrawMinutiae("2_1"); //draw minutiae of fingerprint 2_1.png
+	
     //---------------------------
     // Test overall functionality
     //---------------------------
 	//compare 1_1.png with 1_2.png: they are supposed to match
     //testCompareFingerprints("1_1", "1_2", true);  //expected match: true
-
+    
     //compare 1_1.png with 2_1.png: they are not supposed to match
     //testCompareFingerprints("1_1", "2_1", false); //expected match: false
 
     //compare 1_1 with all other images of the same finger
-   // testCompareAllFingerprints("1_1", 1, true);
+    testCompareAllFingerprints("1_1", 1, true);
 
     //compare 1_1 with all images of finger 2
     //testCompareAllFingerprints("1_1", 2, false);
 
     //compare 1_1 with all images of finger 3 to 16
-   // for (int f = 3; f <= 16; f++) {
-    //    testCompareAllFingerprints("1_1", f, false);
+    //for (int f = 3; f <= 16; f++) {
+    //  testCompareAllFingerprints("1_1", f, false);
     //}
   }
 
