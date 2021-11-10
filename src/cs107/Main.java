@@ -30,9 +30,11 @@ public class Main {
     //testThin();
     //testWithSkeleton();
 
-    // boolean[][] image = Fingerprint.getImage("resources/fingerprints/1_8.png");
+    Fingerprint.exportSkeleton("resources/fingerprints/6_1.png", "6_1 skeleton.png");
 
-    // Fingerprint.processImage(image, "debug_1_8.png");
+    boolean[][] image = Fingerprint.getImage("resources/fingerprints/6_1.png");
+
+    Fingerprint.processImage(image, "debug_6_1.png");
 
     // region DEBUG
 
@@ -136,7 +138,7 @@ public class Main {
     //testCompareFingerprints("1_1", "2_1", false); //expected match: false
 
     //compare 1_1 with all other images of the same finger
-    testCompareAllFingerprints("1_1", 1, true);
+    //testCompareAllFingerprints("1_1", 1, true);
 
     //compare 1_1 with all images of finger 2
     //testCompareAllFingerprints("1_1", 2, false);
@@ -145,6 +147,11 @@ public class Main {
     //for (int f = 3; f <= 16; f++) {
     //  testCompareAllFingerprints("1_1", f, false);
     //}
+
+    //for (int i = 1; i <= 6; i++) {
+    //  testCompareAllFingerprints(i + "_1", i, true);
+    //}
+  
   }
 
   /**

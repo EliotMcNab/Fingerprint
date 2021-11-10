@@ -998,29 +998,41 @@ do{
     */
     public static List<int[]> extract(boolean[][] image) {
 
+        // variable which contains the coordinates of all the minutiae in a fingerprint
         ArrayList<int[]> coordinates = new ArrayList<int[]>();
 
         // size of the image
         final int IMAGE_HEIGHT = image.length;
         final int IMAGE_WIDTH = image[0].length;
 
-        int angle;
+        // for every row in the image...
+        for (int row = 1; row < IMAGE_HEIGHT-1; row++){
+            // ...and every pixel in each row...
+            for (int col = 1 ; col < IMAGE_WIDTH-1; col++){
 
-        for (int i=1;i<IMAGE_HEIGHT-1;i++){
-            for (int j=1;j<IMAGE_WIDTH-1;j++){
+                // ...if the pixel is black...
+                if (isBlack(image, row, col)) {
 
-                int numTransitions = transitions(getNeighbours(image,i,j));
-                
-                if((image[i][j]==true) && ((numTransitions == 1)||(numTransitions==3))){
+                    // ...gets its neighbours
+                    boolean[] curNeighbours = getNeighbours(image, row, col);
 
-                    angle=computeOrientation(image,i,j,ORIENTATION_DISTANCE);
-                    // if (angle == 270) System.out.println(angle);
-                    coordinates.add(new int[]{i, j, angle});
+                    // determines whether the number of transitions in the pixels
+                    // neighbouring the current pixel are characteristic of a minutia
+                    int numTransitions = transitions(curNeighbours);
+                    final boolean ARE_MINUTIA_TRANSITIONS = numTransitions == 1 || numTransitions == 3;
 
+                    // if the transitions are characteristic of a minutia...
+                    if (ARE_MINUTIA_TRANSITIONS) {
+
+                        // ...counts the pixel as a minutia
+                        int angle = computeOrientation(image,row,col,ORIENTATION_DISTANCE);
+                        coordinates.add(new int[]{row, col, angle});
+                    }
                 }
             }
         }
 
+        // returns the coordinates of every minutia in the fingerprint
         return coordinates;
     }
 
@@ -1034,7 +1046,11 @@ do{
     * @return the minutia rotated around the given center.
     */
     public static int[] applyRotation(int[] minutia, int centerRow, int centerCol, int rotation) {
-        //TODO implement
+
+        /*final int MINUTIA_ROW   = minutia[0];
+        final int MINUTIA_COL   = minutia[1];
+        final int MINUTIA_ANGLE = minutia[2];*/
+
         int row=minutia[0];
         int col=minutia[1];
         int orientation=minutia[2];
@@ -1049,6 +1065,7 @@ do{
         double   newCol = newX + centerCol;
 
         double newOrientation = (orientation + rotation) % 360;
+
         return (new int[]{(int)newRow, (int)newCol,(int) newOrientation});
     }
 
@@ -1064,6 +1081,7 @@ do{
         int row=minutia[0];
         int col=minutia[1];
         int orientation=minutia[2];
+
         int newRow = row-rowTranslation;
         int    newCol = col-colTranslation;
         int newOrientation = orientation;
@@ -1084,6 +1102,7 @@ do{
     */
     public static int[] applyTransformation(int[] minutia, int centerRow, int centerCol, int rowTranslation,
                                             int colTranslation, int rotation) {
+
         int[] rotation_minutia=applyRotation(minutia, centerRow, centerCol, rotation);
         int[] transformed_minutia=applyTranslation(rotation_minutia, rowTranslation, colTranslation);
 
@@ -1107,11 +1126,11 @@ do{
 
         List <int[]> transformed_minutiae = new ArrayList<int[]>();
         int size= minutiae.size();
+
         for (int i=0;i<size;i++){
             transformed_minutiae.add(applyTransformation(minutiae.get(i),centerRow,centerCol,rowTranslation, colTranslation, rotation) );
 
         }
-
 
         return transformed_minutiae;
     }
@@ -1132,6 +1151,7 @@ do{
         int size_one=minutiae1.size();
         int size_two=minutiae2.size();
         int nbMatches=0;
+
         for(int i=0;i<size_one;i++){
 
             int row_one=minutiae1.get(i)[0];
@@ -1168,6 +1188,9 @@ do{
         //TODO implement
         int size_one=minutiae1.size();
         int size_two=minutiae2.size();
+
+        int nbMatches = 0;
+
         for (int i=0;i<size_one;i++) {
 
             int row_one = minutiae1.get(i)[0];
@@ -1183,18 +1206,23 @@ do{
 
                 int rotation=orientation_two-orientation_one;
 
-                for (int angle=rotation-MATCH_ANGLE_OFFSET;angle<=rotation-MATCH_ANGLE_OFFSET;angle++) {
+                for (int angle=rotation-MATCH_ANGLE_OFFSET;angle<=rotation+MATCH_ANGLE_OFFSET;angle++) {
+
                     List<int[]> transformed_minutiae= applyTransformation(minutiae2, row_one, col_one,
                                                                 row_two - row_one,
                                                                 col_two - col_one,angle );
-                    int nbMatches=matchingMinutiaeCount(minutiae1, transformed_minutiae,
+
+                    nbMatches = matchingMinutiaeCount(minutiae1, transformed_minutiae,
                                                         DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
                     if (nbMatches>=FOUND_THRESHOLD){
+                        System.out.println(nbMatches);
                         return true ;
                     }
                 }
             }
         }
+
+        System.out.println(nbMatches);
         return false;
     }
 
@@ -1340,6 +1368,14 @@ do{
 
         // saves the debug image under png format
         Helper.writeBinary("debug_finderprints.png", FINAL_DEBUG_IMAGE);
+    }
+
+    public static void exportSkeleton(String imagePath, String imageName) {
+
+        boolean[][] image = getImage(imagePath);
+
+        Helper.writeBinary(imageName, thin(image));
+
     }
 
     // endregion
