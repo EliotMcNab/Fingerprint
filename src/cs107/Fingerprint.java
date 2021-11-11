@@ -96,17 +96,6 @@ public class Fingerprint {
 
     /**
      * Returns true if the selected pixel is white
-     * @param image image which contains the pixel
-     * @param row y-coordinates of the pixel
-     * @param col x-coordinates of the pixel
-     * @return whether the pixel is white
-     */
-    public static boolean isWhite(boolean[][] image, int row, int col) {
-        return !isBlack(image, row, col);
-    }
-
-    /**
-     * Returns true if the selected pixel is white
      * @param neighbours neighbouring pixels to another pixel
      * @param curNeighbour neighbouring pixel whose value is to be checked
      * @return whether the pixel is white
@@ -158,12 +147,6 @@ public class Fingerprint {
 
         // the values around the current pixel
         boolean[] neighBoringValues = new boolean[8];
-
-        // whether the current pixels is on a border
-        boolean hasPixelAbove = row != 0;
-        boolean hasPixelBelow = row != image.length-1;
-        boolean hasPixelToLeft = col != 0;
-        boolean hasPixelToRight = col != image[0].length-1;
 
         // checks the values of the pixels above the current pixel
         checkUpperPixels(neighBoringValues, image, row, col);
@@ -445,21 +428,6 @@ public class Fingerprint {
 
         // returns the final number of transition
         return numTransitions;
-
-        /*
-        int transitions=0;
-        for (int i=0;i<neighbours.length-1;i++) {
-            if ((neighbours[i]==false)&&(neighbours[i+1]==true)) {
-                transitions++;
-            }
-            if ((neighbours[7]==false)&&(neighbours[0]==true)) {
-                transitions++;
-            }
-
-        }
-        return transitions;
-        */
-
     }
 
     /**
@@ -584,9 +552,6 @@ public class Fingerprint {
     */
     public static boolean[][] thin(boolean[][] image) {
 
-        // debug images for each thinning step
-        ArrayList<boolean[][]> debugImages = new ArrayList<>();
-
         // the dimensions of the image
         final int IMAGE_HEIGHT = image.length;
         final int IMAGE_WIDTH  = image[0].length;
@@ -597,9 +562,6 @@ public class Fingerprint {
 
         // initialises the current image as a copy of the initial image
         copy2DArray(image, currentImage);
-
-        // for debug purposes, used to generate an image of the fingerprint for each thinning step taken
-        int i = 0;
 
         // while we can still apply some thinning to the image...
         while (!identical(previousImage, currentImage)) {
@@ -636,15 +598,13 @@ public class Fingerprint {
 
 do{
     for (int i = 0; i < n; i++) {
-        for (int j = 0; j < m; j++) {
-            connected_inter[i][j]=connected_pixels[i][j];
-        }
+        System.arraycopy(connected_pixels[i], 0, connected_inter[i], 0, m);
     }
 
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
-            if ((image[i][j] == true) &&
+            if (isBlack(image, i, j) &&
                     (hasBlackNeighbour(getNeighbours(connected_pixels, i, j))) &&
                     (Math.abs(i - row) <= (distance)) &&
                     (Math.abs(j - col) <=( distance))) {
@@ -661,9 +621,6 @@ do{
     }
 
     public static boolean[][] connectedPixels(boolean[][] image, int row, int col, int distance) {
-      //TODO implement
-        int n=image.length ;
-        int m=image[0].length ;
         boolean [][] connected_pixels;
 
         connected_pixels=connected(image,row ,col,distance);
@@ -1146,21 +1103,15 @@ do{
     public static List<int[]> applyTransformation(List<int[]> minutiae, int centerRow, int centerCol, int rowTranslation,
                                                   int colTranslation, int rotation) {
 
-        // the variable containing all the minutias after they have been transformed
+        // the variable containing all the minutiae after they have been transformed
         List <int[]> allTransformedMinutia = new ArrayList<int[]>();
 
-        // the number of minutiae
-        final int NUM_MINUTIAE = minutiae.size();
-
         // for every minutia...
-        for (int minutiaIndex=0; minutiaIndex < NUM_MINUTIAE; minutiaIndex++){
-
-            // ...gets the current minutia
-            int[] curMinutia = minutiae.get(minutiaIndex);
+        for (int[] curMinutia : minutiae) {
 
             // ...applies the transformation to it
-            int[] transformedMinutia = applyTransformation(   curMinutia, centerRow, centerCol,
-                                                            rowTranslation,colTranslation,rotation);
+            int[] transformedMinutia = applyTransformation(curMinutia, centerRow, centerCol,
+                    rowTranslation, colTranslation, rotation);
 
             // ...saves the transformed minutia
             allTransformedMinutia.add(transformedMinutia);
@@ -1184,43 +1135,39 @@ do{
     public static int matchingMinutiaeCount(List<int[]> minutiae1, List<int[]> minutiae2, int maxDistance,
                                             int maxOrientation) {
 
-        // the number of minutiae in each list
-        final int NUM_MINUTIAE_ONE = minutiae1.size();  // minutiae1
-        final int NUM_MINUTIAE_TWO = minutiae2.size();  // minutiae2
-
         // the number of matches found so far
         int nbMatches=0;
 
         // for every minutia in the first list of minutiae...
-        for(int minutiaIndex1 = 0; minutiaIndex1 < NUM_MINUTIAE_ONE; minutiaIndex1++){
+        for (int[] curMinutia1 : minutiae1) {
 
             // ...gets the characteristics of the current minutia in that list
-            int minutiaRowOne           = minutiae1.get(minutiaIndex1)[0];
-            int minutiaColOne           = minutiae1.get(minutiaIndex1)[1];
-            int minutiaOrientationOne   = minutiae1.get(minutiaIndex1)[2];
+            int minutiaRowOne = curMinutia1[0];
+            int minutiaColOne = curMinutia1[1];
+            int minutiaOrientationOne = curMinutia1[2];
 
             // for every minutia in the second list of minutiae...
-            for (int minutiaIndex2 = 0; minutiaIndex2 < NUM_MINUTIAE_TWO; minutiaIndex2++){
+            for (int[] curMinutia2 : minutiae2) {
 
                 // ...gets the characteristics of the current minutia in that list
-                int minutiaRowTwo           = minutiae2.get(minutiaIndex2)[0];
-                int minutiaColTwo           = minutiae2.get(minutiaIndex2)[1];
-                int minutiaOrientationTwo   = minutiae2.get(minutiaIndex2)[2];
+                int minutiaRowTwo = curMinutia2[0];
+                int minutiaColTwo = curMinutia2[1];
+                int minutiaOrientationTwo = curMinutia2[2];
 
                 // computes the distance between minutiae
-                int minutiaRowDistance          = (minutiaRowOne-minutiaRowTwo)*(minutiaRowOne-minutiaRowTwo);
-                int minutiaColDistance          = (minutiaColOne-minutiaColTwo)*(minutiaColOne-minutiaColTwo);
+                int minutiaRowDistance = (minutiaRowOne - minutiaRowTwo) * (minutiaRowOne - minutiaRowTwo);
+                int minutiaColDistance = (minutiaColOne - minutiaColTwo) * (minutiaColOne - minutiaColTwo);
                 double minutiaEuclideanDistance = Math.sqrt(minutiaRowDistance + minutiaColDistance);
 
                 // computes hte difference in orientation between the two minutiae
-                double orientation_difference= Math.abs(minutiaOrientationOne-minutiaOrientationTwo);
+                double orientation_difference = Math.abs(minutiaOrientationOne - minutiaOrientationTwo);
 
                 // determines if the minutiae are close enough
                 final boolean MINUTIAE_ARE_CLOSE_ENOUGH = (minutiaEuclideanDistance <= maxDistance)
-                                                            && (orientation_difference<=maxOrientation);
+                        && (orientation_difference <= maxOrientation);
 
                 // the minutiae are within the allowed distance...
-                if (MINUTIAE_ARE_CLOSE_ENOUGH){
+                if (MINUTIAE_ARE_CLOSE_ENOUGH) {
                     // ...counts them as a match
                     nbMatches++;
                 }
@@ -1427,7 +1374,7 @@ do{
         }
 
         // saves the debug image under png format
-        Helper.writeBinary("debug_finderprints.png", FINAL_DEBUG_IMAGE);
+        Helper.writeBinary("debug_fingerprint.png", FINAL_DEBUG_IMAGE);
     }
 
     public static void exportSkeleton(String imagePath, String imageName) {
