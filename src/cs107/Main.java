@@ -148,9 +148,9 @@ public class Main {
     //  testCompareAllFingerprints("1_1", f, false);
     //}
 
-    //for (int i = 1; i <= 6; i++) {
-    //  testCompareAllFingerprints(i + "_1", i, true);
-    //}
+    for (int i = 1; i <= 6; i++) {
+      testCompareAllFingerprints(i + "_1", i, true);
+    }
   
   }
 

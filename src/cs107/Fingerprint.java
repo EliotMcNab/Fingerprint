@@ -633,16 +633,7 @@ public class Fingerprint {
 
         connected_pixels[row][col] = image[row][col];
        boolean[][] connected_inter = new boolean[n][m];
-       /* for (int i = 0; i < n; i++) {
-            for (int j = 0; j < m; j++) {
-                if ((image[i][j] == true) &&
-                        (hasBlackNeighbour(getNeighbours(connected_pixels, i, j))) &&
-                        (Math.abs(i - row) <= (distance)) &&
-                        (Math.abs(j - col) <=( distance))) {
-                    connected_pixels[i][j] = true;
-                }
-            }
-        } */
+
 do{
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
@@ -999,7 +990,7 @@ do{
     public static List<int[]> extract(boolean[][] image) {
 
         // variable which contains the coordinates of all the minutiae in a fingerprint
-        ArrayList<int[]> coordinates = new ArrayList<int[]>();
+        ArrayList<int[]> minutiaCoordinates = new ArrayList<int[]>();
 
         // size of the image
         final int IMAGE_HEIGHT = image.length;
@@ -1010,7 +1001,7 @@ do{
             // ...and every pixel in each row...
             for (int col = 1 ; col < IMAGE_WIDTH-1; col++){
 
-                // ...if the pixel is black...
+                // if the pixel is black and is not too clos to the previous minutia
                 if (isBlack(image, row, col)) {
 
                     // ...gets its neighbours
@@ -1026,14 +1017,14 @@ do{
 
                         // ...counts the pixel as a minutia
                         int angle = computeOrientation(image,row,col,ORIENTATION_DISTANCE);
-                        coordinates.add(new int[]{row, col, angle});
+                        minutiaCoordinates.add(new int[]{row, col, angle});
                     }
                 }
             }
         }
 
         // returns the coordinates of every minutia in the fingerprint
-        return coordinates;
+        return minutiaCoordinates;
     }
 
     /**
@@ -1047,26 +1038,40 @@ do{
     */
     public static int[] applyRotation(int[] minutia, int centerRow, int centerCol, int rotation) {
 
-        /*final int MINUTIA_ROW   = minutia[0];
-        final int MINUTIA_COL   = minutia[1];
-        final int MINUTIA_ANGLE = minutia[2];*/
+        // extracts the characteristics of the minutia
+        final int MINUTIA_ROW           = minutia[0];
+        final int MINUTIA_COL           = minutia[1];
+        final int MINUTIA_ORIENTATION   = minutia[2];
 
-        int row=minutia[0];
-        int col=minutia[1];
-        int orientation=minutia[2];
-        double rotation_rad=Math.toRadians(rotation);
+        // converts the rotation from degrees to radians
+        final double ROTATION_RAD       = Math.toRadians(rotation);
 
-        int x = col-centerCol;
+        // determines the relative position of the minutia
+        final int RELATIVE_COL = centerCol(MINUTIA_COL, centerCol);
+        final int RELATIVE_ROW = centerRow(MINUTIA_ROW, centerRow);
 
-        int    y = centerRow-row;
-        double newX = x * Math.cos(rotation_rad)-y * Math.sin(rotation_rad);
-        double newY = x * Math.sin(rotation_rad) + y * Math.cos(rotation_rad);
-        double newRow = centerRow-newY;
-        double   newCol = newX + centerCol;
+        // applies the rotation to the minutia
+        final int ROTATED_COL = (int) (RELATIVE_COL * Math.cos(ROTATION_RAD) - RELATIVE_ROW * Math.sin(ROTATION_RAD));
+        final int ROTATED_ROW = (int) (RELATIVE_COL * Math.sin(ROTATION_RAD) + RELATIVE_ROW * Math.cos(ROTATION_RAD));
 
-        double newOrientation = (orientation + rotation) % 360;
+        // determines the final coordinates of the minutia after it has been rotated
+        final int NEW_ROW = centerRow   - ROTATED_ROW;
+        final int NEW_COL = ROTATED_COL + centerCol;
 
-        return (new int[]{(int)newRow, (int)newCol,(int) newOrientation});
+        // determines the orientation of the minutia after it has been rotated
+        final int NEW_ORIENTATION = (MINUTIA_ORIENTATION + rotation) % 360;
+
+        // saves the characteristics of the rotated minutia into an array
+        // 0 : row
+        // 1 : column
+        // 2 : orientation
+        int[] rotatedMinutia    = new int[3];
+        rotatedMinutia[0]       = NEW_ROW;
+        rotatedMinutia[1]       = NEW_COL;
+        rotatedMinutia[2]       = NEW_ORIENTATION;
+
+        // returns the characteristics of the rotated minutia
+        return rotatedMinutia;
     }
 
     /**
@@ -1078,14 +1083,28 @@ do{
     * @return the translated minutia.
     */
     public static int[] applyTranslation(int[] minutia, int rowTranslation, int colTranslation) {
-        int row=minutia[0];
-        int col=minutia[1];
-        int orientation=minutia[2];
 
-        int newRow = row-rowTranslation;
-        int    newCol = col-colTranslation;
-        int newOrientation = orientation;
-        return (new int[]{(int)newRow, (int)newCol,(int) newOrientation});
+        // extracts the characteristics of the minutia
+        final int MINUTIA_ROW           = minutia[0];
+        final int MINUTIA_COL           = minutia[1];
+        final int MINUTIA_ORIENTATION   = minutia[2];
+
+        // determines the new characteristics of the minutia after translation
+        final int NEW_ROW               = MINUTIA_ROW -rowTranslation;
+        final int NEW_COL               = MINUTIA_COL-colTranslation;
+        final int NEW_ORIENTATION       = MINUTIA_ORIENTATION;
+
+        // saves the characteristics of the translated minutia into an array
+        // 0 : row
+        // 1 : column
+        // 2 : orientation
+        int[] translatedMinutia     = new int[3];
+        translatedMinutia[0]        = NEW_ROW;
+        translatedMinutia[1]        = NEW_COL;
+        translatedMinutia[2]        = NEW_ORIENTATION;
+
+        // returns the characteristics of the translated minutia
+        return translatedMinutia;
     }
 
     /**
@@ -1103,10 +1122,13 @@ do{
     public static int[] applyTransformation(int[] minutia, int centerRow, int centerCol, int rowTranslation,
                                             int colTranslation, int rotation) {
 
-        int[] rotation_minutia=applyRotation(minutia, centerRow, centerCol, rotation);
-        int[] transformed_minutia=applyTranslation(rotation_minutia, rowTranslation, colTranslation);
+        // rotates the minutia
+        int[] rotatedMinutiae       = applyRotation(minutia, centerRow, centerCol, rotation);
+        // translates the minutia
+        int[] translatedMinutia    = applyTranslation(rotatedMinutiae, rowTranslation, colTranslation);
 
-        return transformed_minutia;
+        // returns the final rotated and translated minutia
+        return translatedMinutia;
     }
 
     /**
@@ -1124,15 +1146,29 @@ do{
     public static List<int[]> applyTransformation(List<int[]> minutiae, int centerRow, int centerCol, int rowTranslation,
                                                   int colTranslation, int rotation) {
 
-        List <int[]> transformed_minutiae = new ArrayList<int[]>();
-        int size= minutiae.size();
+        // the variable containing all the minutias after they have been transformed
+        List <int[]> allTransformedMinutia = new ArrayList<int[]>();
 
-        for (int i=0;i<size;i++){
-            transformed_minutiae.add(applyTransformation(minutiae.get(i),centerRow,centerCol,rowTranslation, colTranslation, rotation) );
+        // the number of minutiae
+        final int NUM_MINUTIAE = minutiae.size();
+
+        // for every minutia...
+        for (int minutiaIndex=0; minutiaIndex < NUM_MINUTIAE; minutiaIndex++){
+
+            // ...gets the current minutia
+            int[] curMinutia = minutiae.get(minutiaIndex);
+
+            // ...applies the transformation to it
+            int[] transformedMinutia = applyTransformation(   curMinutia, centerRow, centerCol,
+                                                            rowTranslation,colTranslation,rotation);
+
+            // ...saves the transformed minutia
+            allTransformedMinutia.add(transformedMinutia);
 
         }
 
-        return transformed_minutiae;
+        // returns all the minutiae once they have been transformed
+        return allTransformedMinutia;
     }
     /**
     * Counts the number of overlapping minutiae.
@@ -1147,32 +1183,59 @@ do{
     */
     public static int matchingMinutiaeCount(List<int[]> minutiae1, List<int[]> minutiae2, int maxDistance,
                                             int maxOrientation) {
-        //TODO implement
-        int size_one=minutiae1.size();
-        int size_two=minutiae2.size();
+
+        // the number of minutiae in each list
+        final int NUM_MINUTIAE_ONE = minutiae1.size();  // minutiae1
+        final int NUM_MINUTIAE_TWO = minutiae2.size();  // minutiae2
+
+        // the number of matches found so far
         int nbMatches=0;
 
-        for(int i=0;i<size_one;i++){
+        // for every minutia in the first list of minutiae...
+        for(int minutiaIndex1 = 0; minutiaIndex1 < NUM_MINUTIAE_ONE; minutiaIndex1++){
 
-            int row_one=minutiae1.get(i)[0];
-            int col_one=minutiae1.get(i)[1];
-            int orientation_one=minutiae1.get(i)[2];
+            // ...gets the characteristics of the current minutia in that list
+            int minutiaRowOne           = minutiae1.get(minutiaIndex1)[0];
+            int minutiaColOne           = minutiae1.get(minutiaIndex1)[1];
+            int minutiaOrientationOne   = minutiae1.get(minutiaIndex1)[2];
 
-            for (int j=0;j<size_two;j++){
+            // for every minutia in the second list of minutiae...
+            for (int minutiaIndex2 = 0; minutiaIndex2 < NUM_MINUTIAE_TWO; minutiaIndex2++){
 
-                int row_two=minutiae2.get(j)[0];
-                int col_two=minutiae2.get(j)[1];
-                int orientation_two=minutiae2.get(j)[2];
+                // ...gets the characteristics of the current minutia in that list
+                int minutiaRowTwo           = minutiae2.get(minutiaIndex2)[0];
+                int minutiaColTwo           = minutiae2.get(minutiaIndex2)[1];
+                int minutiaOrientationTwo   = minutiae2.get(minutiaIndex2)[2];
 
-                double distance=Math.sqrt((row_one-row_two)*(row_one-row_two)+(col_one-col_two)*(col_one-col_two));
-                double orientation_difference= Math.abs(orientation_one-orientation_two);
+                // computes the distance between minutiae
+                int minutiaRowDistance          = (minutiaRowOne-minutiaRowTwo)*(minutiaRowOne-minutiaRowTwo);
+                int minutiaColDistance          = (minutiaColOne-minutiaColTwo)*(minutiaColOne-minutiaColTwo);
+                double minutiaEuclideanDistance = Math.sqrt(minutiaRowDistance + minutiaColDistance);
 
-                if ((distance<=maxDistance)&&(orientation_difference<=maxOrientation)){
+                // computes hte difference in orientation between the two minutiae
+                double orientation_difference= Math.abs(minutiaOrientationOne-minutiaOrientationTwo);
+
+                // determines if the minutiae are close enough
+                final boolean MINUTIAE_ARE_CLOSE_ENOUGH = (minutiaEuclideanDistance <= maxDistance)
+                                                            && (orientation_difference<=maxOrientation);
+
+                // the minutiae are within the allowed distance...
+                if (MINUTIAE_ARE_CLOSE_ENOUGH){
+                    // ...counts them as a match
                     nbMatches++;
+                }
+
+                // if the number of matches has reached the required threshold...
+                if (nbMatches >= FOUND_THRESHOLD) {
+                    // ...stops looking for more matches
+                    return nbMatches;
                 }
 
             }
         }
+
+        // in the case where not enough matches have been found
+        // returns the number of matches which has been found anyway
         return nbMatches;
     }
 
@@ -1185,7 +1248,6 @@ do{
     *         otherwise.
     */
     public static boolean match(List<int[]> minutiae1, List<int[]> minutiae2) {
-        //TODO implement
         int size_one=minutiae1.size();
         int size_two=minutiae2.size();
 
@@ -1215,14 +1277,12 @@ do{
                     nbMatches = matchingMinutiaeCount(minutiae1, transformed_minutiae,
                                                         DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
                     if (nbMatches>=FOUND_THRESHOLD){
-                        System.out.println(nbMatches);
                         return true ;
                     }
                 }
             }
         }
 
-        System.out.println(nbMatches);
         return false;
     }
 
