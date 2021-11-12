@@ -1235,9 +1235,9 @@ public class Fingerprint {
             }
 
             // ...gets the characteristics of the current minutia in that list
-            int minutiaRow1         = curMinutia1[0];
-            int minutiaCol1         = curMinutia1[1];
-            int orientation_one     = curMinutia1[2];
+            int minutiaRow1             = curMinutia1[0];
+            int minutiaCol1             = curMinutia1[1];
+            int minutiaOrientation1     = curMinutia1[2];
 
             // for every minutia in the second list of minutiae...
             for (int[] curMinutia2 : minutiae2) {
@@ -1247,7 +1247,7 @@ public class Fingerprint {
                 int minutiaCol2         = curMinutia2[1];
                 int orientation_two = curMinutia2[2];
 
-                int rotation=orientation_two-orientation_one;
+                int rotation=orientation_two-minutiaOrientation1;
 
                 for (int angle=rotation-MATCH_ANGLE_OFFSET;angle<=rotation+MATCH_ANGLE_OFFSET;angle++) {
 
