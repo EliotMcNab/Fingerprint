@@ -46,10 +46,9 @@ public class Fingerprint {
     public static final int MINUTIA_LINE_COLOR = 0xff00ff;
     public static final int MINUTIA_LINE_LENGTH = 10;
 
-    // TODO implement properly as part of a custom image class
-    private static void pixelOutOfBoundsError() {
-
-    }
+    // ==========================================================================
+    //                          GETTING PIXEL INFORMATION
+    // ==========================================================================
 
     /**
      * Returns true if the selected pixel is black
@@ -76,8 +75,8 @@ public class Fingerprint {
 
             // formats a new error message
             String errorMessage = String.format("Invalid pixel coordinates ! valid coordinates are" +
-                    "0 < x < %s and 0 < y < %s ! current coordinates: x = %s y = %s",
-                    IMAGE_WIDTH-1, IMAGE_HEIGHT-1, col, row);
+                                                "0 < x < %s and 0 < y < %s ! current coordinates: x = %s y = %s",
+                                                IMAGE_WIDTH-1, IMAGE_HEIGHT-1, col, row);
 
             // throws error with clearer error message
             throw new IndexOutOfBoundsException(errorMessage);
@@ -143,7 +142,6 @@ public class Fingerprint {
                                 // earlier)
 
         // TODO not functional yet but represents functionality of future Image class
-        pixelOutOfBoundsError();
 
         // the values around the current pixel
         boolean[] neighBoringValues = new boolean[8];
@@ -430,6 +428,10 @@ public class Fingerprint {
         return numTransitions;
     }
 
+    // ==========================================================================
+    //                               THINNING
+    // ==========================================================================
+
     /**
     * Returns <code>true</code> if the images are identical and false otherwise.
     *
@@ -596,29 +598,26 @@ public class Fingerprint {
         connected_pixels[row][col] = image[row][col];
        boolean[][] connected_inter = new boolean[n][m];
 
-do{
-    for (int i = 0; i < n; i++) {
-        System.arraycopy(connected_pixels[i], 0, connected_inter[i], 0, m);
-    }
-
-
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < m; j++) {
-            if (isBlack(image, i, j) &&
-                    (hasBlackNeighbour(getNeighbours(connected_pixels, i, j))) &&
-                    (Math.abs(i - row) <= (distance)) &&
-                    (Math.abs(j - col) <=( distance))) {
-                connected_pixels[i][j] = true;
+        do{
+            for (int i = 0; i < n; i++) {
+                System.arraycopy(connected_pixels[i], 0, connected_inter[i], 0, m);
             }
-        }
-    }
 
+            for (int i = 0; i < n; i++) {
+                for (int j = 0; j < m; j++) {
+                    if (isBlack(image, i, j) &&
+                            (hasBlackNeighbour(getNeighbours(connected_pixels, i, j))) &&
+                            (Math.abs(i - row) <= (distance)) &&
+                            (Math.abs(j - col) <=( distance))) {
+                        connected_pixels[i][j] = true;
+                    }
+                }
+            }
 
+        } while(!identical(connected_inter,connected_pixels));
 
-} while(!identical(connected_inter,connected_pixels));
-
-        return connected_pixels ;
-    }
+                return connected_pixels ;
+            }
 
     public static boolean[][] connectedPixels(boolean[][] image, int row, int col, int distance) {
         boolean [][] connected_pixels;
@@ -633,6 +632,10 @@ do{
         }
         return false;
     }
+
+    // ==========================================================================
+    //                              GETTING MINUTIAE
+    // ==========================================================================
 
     /**
      * Computes the parameters needed for linear regression
@@ -984,6 +987,10 @@ do{
         return minutiaCoordinates;
     }
 
+    // ==========================================================================
+    //                              MINUTIA COMPARISON
+    // ==========================================================================
+
     /**
     * Applies the specified rotation to the minutia.
     *
@@ -1082,7 +1089,7 @@ do{
         // rotates the minutia
         int[] rotatedMinutiae       = applyRotation(minutia, centerRow, centerCol, rotation);
         // translates the minutia
-        int[] translatedMinutia    = applyTranslation(rotatedMinutiae, rowTranslation, colTranslation);
+        int[] translatedMinutia     = applyTranslation(rotatedMinutiae, rowTranslation, colTranslation);
 
         // returns the final rotated and translated minutia
         return translatedMinutia;
@@ -1121,6 +1128,7 @@ do{
         // returns all the minutiae once they have been transformed
         return allTransformedMinutia;
     }
+
     /**
     * Counts the number of overlapping minutiae.
     *
@@ -1138,39 +1146,42 @@ do{
         // the number of matches found so far
         int nbMatches=0;
 
+        // the number of remaining potential matches
+        int remainingMatches = minutiae1.size();
+
         // for every minutia in the first list of minutiae...
-        for (int[] curMinutia1 : minutiae1) {
+        minutiaLoop1 : for (int[] curMinutia1 : minutiae1) {
+
+            // if there are less remaining potential matches than needed for a valid match...
+            if (nbMatches + remainingMatches < FOUND_THRESHOLD) {
+                // ...stops looking for more matches
+                return nbMatches;
+            }
 
             // ...gets the characteristics of the current minutia in that list
-            int minutiaRowOne = curMinutia1[0];
-            int minutiaColOne = curMinutia1[1];
-            int minutiaOrientationOne = curMinutia1[2];
+            int minutiaRow1             = curMinutia1[0];
+            int minutiaCol1             = curMinutia1[1];
+            int minutiaOrientation1     = curMinutia1[2];
 
             // for every minutia in the second list of minutiae...
             for (int[] curMinutia2 : minutiae2) {
 
                 // ...gets the characteristics of the current minutia in that list
-                int minutiaRowTwo = curMinutia2[0];
-                int minutiaColTwo = curMinutia2[1];
-                int minutiaOrientationTwo = curMinutia2[2];
+                int minutiaRow2                 = curMinutia2[0];
+                int minutiaCol2                 = curMinutia2[1];
+                int minutiaOrientation2         = curMinutia2[2];
 
                 // computes the distance between minutiae
-                int minutiaRowDistance = (minutiaRowOne - minutiaRowTwo) * (minutiaRowOne - minutiaRowTwo);
-                int minutiaColDistance = (minutiaColOne - minutiaColTwo) * (minutiaColOne - minutiaColTwo);
+                int minutiaRowDistance          = (minutiaRow1 - minutiaRow2) * (minutiaRow1 - minutiaRow2);
+                int minutiaColDistance          = (minutiaCol1 - minutiaCol2) * (minutiaCol1 - minutiaCol2);
                 double minutiaEuclideanDistance = Math.sqrt(minutiaRowDistance + minutiaColDistance);
 
                 // computes hte difference in orientation between the two minutiae
-                double orientation_difference = Math.abs(minutiaOrientationOne - minutiaOrientationTwo);
+                double orientation_difference = Math.abs(minutiaOrientation1 - minutiaOrientation2);
 
                 // determines if the minutiae are close enough
                 final boolean MINUTIAE_ARE_CLOSE_ENOUGH = (minutiaEuclideanDistance <= maxDistance)
                         && (orientation_difference <= maxOrientation);
-
-                // the minutiae are within the allowed distance...
-                if (MINUTIAE_ARE_CLOSE_ENOUGH) {
-                    // ...counts them as a match
-                    nbMatches++;
-                }
 
                 // if the number of matches has reached the required threshold...
                 if (nbMatches >= FOUND_THRESHOLD) {
@@ -1178,7 +1189,18 @@ do{
                     return nbMatches;
                 }
 
+                // the minutiae are within the allowed distance...
+                if (MINUTIAE_ARE_CLOSE_ENOUGH) {
+                    // ...counts them as a match
+                    nbMatches++;
+                    // moves on to the next loop iteration
+                    continue minutiaLoop1;
+                }
             }
+
+            // one less possible match per loop iteration
+            remainingMatches--;
+
         }
 
         // in the case where not enough matches have been found
@@ -1195,31 +1217,43 @@ do{
     *         otherwise.
     */
     public static boolean match(List<int[]> minutiae1, List<int[]> minutiae2) {
-        int size_one=minutiae1.size();
-        int size_two=minutiae2.size();
 
+        // the number of matching minutiae which have been found
         int nbMatches = 0;
 
-        for (int i=0;i<size_one;i++) {
+        // the remaining number of POTENTIAL minutia matches
+        int potentialMatches = minutiae1.size();
 
-            int row_one = minutiae1.get(i)[0];
-            int col_one = minutiae1.get(i)[1];
-            int orientation_one = minutiae1.get(i)[2];
+        // for every minutia in the first list of minutiae...
+        for (int[] curMinutia1 : minutiae1) {
 
-            for (int j = 0; j < size_two; j++) {
+            // ...if there are fewer matches remaining than needed for a valid match...
+            if (nbMatches + potentialMatches < FOUND_THRESHOLD) {
+                // ...stops looking for more matches and
+                // considers the fingerprints to be different
+                return false;
+            }
 
+            // ...gets the characteristics of the current minutia in that list
+            int minutiaRow1         = curMinutia1[0];
+            int minutiaCol1         = curMinutia1[1];
+            int orientation_one     = curMinutia1[2];
 
-                int row_two = minutiae2.get(j)[0];
-                int col_two = minutiae2.get(j)[1];
-                int orientation_two = minutiae2.get(j)[2];
+            // for every minutia in the second list of minutiae...
+            for (int[] curMinutia2 : minutiae2) {
+
+                // ...gets the characteristics of the current minutia in that list
+                int minutiaRow2         = curMinutia2[0];
+                int minutiaCol2         = curMinutia2[1];
+                int orientation_two = curMinutia2[2];
 
                 int rotation=orientation_two-orientation_one;
 
                 for (int angle=rotation-MATCH_ANGLE_OFFSET;angle<=rotation+MATCH_ANGLE_OFFSET;angle++) {
 
-                    List<int[]> transformed_minutiae= applyTransformation(minutiae2, row_one, col_one,
-                                                                row_two - row_one,
-                                                                col_two - col_one,angle );
+                    List<int[]> transformed_minutiae= applyTransformation(minutiae2, minutiaRow1, minutiaCol1,
+                                                                minutiaRow2 - minutiaRow1,
+                                                                minutiaCol2 - minutiaCol1,angle );
 
                     nbMatches = matchingMinutiaeCount(minutiae1, transformed_minutiae,
                                                         DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
@@ -1228,6 +1262,8 @@ do{
                     }
                 }
             }
+
+            potentialMatches--;
         }
 
         return false;
