@@ -138,17 +138,23 @@ public class Main {
     //testCompareFingerprints("1_1", "2_1", false); //expected match: false
 
     //compare 1_1 with all other images of the same finger
-    testCompareAllFingerprints("1_5", 14, true);
+    //testCompareAllFingerprints("6_1", 6, true);
 
     //compare 1_1 with all images of finger 2
     //testCompareAllFingerprints("1_1", 2, false);
 
     //compare 1_1 with all images of finger 3 to 16
-    //for (int f = 3; f <= 16; f++) {
-    //  testCompareAllFingerprints("1_1", f, false);
-    //}
+    for (int f = 3; f <= 16; f++) {
 
-    //for (int i = 1; i <= 6; i++) {
+      if (f == 1) {
+        testCompareAllFingerprints("1_1", f, true);
+        continue;
+      }
+
+      testCompareAllFingerprints("1_1", f, false);
+    }
+
+    //for (int i = 1; i <= 16; i++) {
     //  testCompareAllFingerprints(i + "_1", i, true);
     //}
   

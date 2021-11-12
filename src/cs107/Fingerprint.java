@@ -1,5 +1,6 @@
 package cs107;
 
+import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -596,12 +597,14 @@ public class Fingerprint {
         boolean[][] connected_pixels = new boolean[n][m];
 
         connected_pixels[row][col] = image[row][col];
-       boolean[][] connected_inter = new boolean[n][m];
+        boolean[][] connected_inter = new boolean[n][m];
 
         do{
-            for (int i = 0; i < n; i++) {
+            /*for (int i = 0; i < n; i++) {
                 System.arraycopy(connected_pixels[i], 0, connected_inter[i], 0, m);
-            }
+            }*/
+
+            copy2DArray(connected_pixels, connected_inter);
 
             for (int i = 0; i < n; i++) {
                 for (int j = 0; j < m; j++) {
@@ -922,6 +925,7 @@ public class Fingerprint {
     */
     public static int computeOrientation(boolean[][] image, int row, int col, int distance) {
 
+        //
         boolean [][] connectedPixels = connectedPixels( image,  row,  col,  distance);
 
         double slope = computeSlope(connectedPixels,row,col);
@@ -939,14 +943,14 @@ public class Fingerprint {
     }
 
     /**
-    * Extracts the minutiae from a thinned image.
-    *
-    * @param image array containing each pixel's boolean value.
-    * @return The list of all minutiae. A minutia is represented by an array where
-    *         the first element is the row, the second is column, and the third is
-    *         the angle in degrees.
-    * @see #thin(boolean[][])
-    */
+     * Extracts the minutiae from a thinned image.
+     *
+     * @param image array containing each pixel's boolean value.
+     * @return The list of all minutiae. A minutia is represented by an array where
+     *         the first element is the row, the second is column, and the third is
+     *         the angle in degrees.
+     * @see #thin(boolean[][])
+     */
     public static List<int[]> extract(boolean[][] image) {
 
         // variable which contains the coordinates of all the minutiae in a fingerprint
@@ -1153,59 +1157,86 @@ public class Fingerprint {
         minutiaLoop1 : for (int[] curMinutia1 : minutiae1) {
 
             // if there are less remaining potential matches than needed for a valid match...
-            if (nbMatches + remainingMatches < FOUND_THRESHOLD) {
+            /*if (nbMatches + remainingMatches < FOUND_THRESHOLD) {
                 // ...stops looking for more matches
                 return nbMatches;
-            }
+            }*/
 
             // ...gets the characteristics of the current minutia in that list
-            int minutiaRow1             = curMinutia1[0];
-            int minutiaCol1             = curMinutia1[1];
-            int minutiaOrientation1     = curMinutia1[2];
+            int minutiaRow1             = getMinutiaRow(curMinutia1);
+            int minutiaCol1             = getMinutiaCol(curMinutia1);
+            int minutiaOrientation1     = getMinutiaAngle(curMinutia1);
 
             // for every minutia in the second list of minutiae...
             for (int[] curMinutia2 : minutiae2) {
 
                 // ...gets the characteristics of the current minutia in that list
-                int minutiaRow2                 = curMinutia2[0];
-                int minutiaCol2                 = curMinutia2[1];
-                int minutiaOrientation2         = curMinutia2[2];
+                int minutiaRow2                 = getMinutiaRow(curMinutia2);
+                int minutiaCol2                 = getMinutiaCol(curMinutia2);
+                int minutiaOrientation2         = getMinutiaAngle(curMinutia2);
 
                 // computes the distance between minutiae
-                int minutiaRowDistance          = (minutiaRow1 - minutiaRow2) * (minutiaRow1 - minutiaRow2);
-                int minutiaColDistance          = (minutiaCol1 - minutiaCol2) * (minutiaCol1 - minutiaCol2);
-                double minutiaEuclideanDistance = Math.sqrt(minutiaRowDistance + minutiaColDistance);
+                double minutiaEuclideanDistance = getEuclideanDistance(minutiaRow1, minutiaCol1,
+                                                                       minutiaRow2, minutiaCol2);
 
                 // computes hte difference in orientation between the two minutiae
-                double orientation_difference = Math.abs(minutiaOrientation1 - minutiaOrientation2);
+                int orientation_difference      = getOrientationDifference(minutiaOrientation1, minutiaOrientation2);
 
                 // determines if the minutiae are close enough
-                final boolean MINUTIAE_ARE_CLOSE_ENOUGH = (minutiaEuclideanDistance <= maxDistance)
-                        && (orientation_difference <= maxOrientation);
+                final boolean MINUTIAE_ARE_CLOSE_ENOUGH = (minutiaEuclideanDistance <= maxDistance) &&
+                                                          (orientation_difference <= maxOrientation);
 
                 // if the number of matches has reached the required threshold...
-                if (nbMatches >= FOUND_THRESHOLD) {
+                /*if (nbMatches >= FOUND_THRESHOLD) {
                     // ...stops looking for more matches
                     return nbMatches;
-                }
+                }*/
 
                 // the minutiae are within the allowed distance...
                 if (MINUTIAE_ARE_CLOSE_ENOUGH) {
                     // ...counts them as a match
                     nbMatches++;
-                    // moves on to the next loop iteration
-                    continue minutiaLoop1;
                 }
             }
 
             // one less possible match per loop iteration
-            remainingMatches--;
+            //remainingMatches--;
 
         }
 
         // in the case where not enough matches have been found
         // returns the number of matches which has been found anyway
         return nbMatches;
+    }
+
+    /**
+     * Determines the euclidean distance between two minutiae
+     * @param minutiaRow1 y-coordinates of the 1st minutia
+     * @param minutiaCol1 x-coordinates of the 1st minutia
+     * @param minutiaRow2 y-coordinates of the 2nd minutia
+     * @param minutiaCol2 x-coordinates of the 2nd minutia
+     * @return euclidean distance between the two minutiae
+     */
+    private static double getEuclideanDistance(int minutiaRow1, int minutiaCol1, int minutiaRow2, int minutiaCol2) {
+
+        // gets the distance squared between the rows and columns of the minutiae
+        int minutiaRowDistance = (minutiaRow1 - minutiaRow2) * (minutiaRow1 - minutiaRow2);
+        int minutiaColDistance = (minutiaCol1 - minutiaCol2) * (minutiaCol1 - minutiaCol2);
+
+        // determines and returns the euclidean distance
+        return Math.sqrt(minutiaRowDistance + minutiaColDistance);
+    }
+
+    /**
+     * Determines the difference in orientation (in degrees) between two minutiae
+     * @param minutiaOrientation1 orientation of the 1st minutia
+     * @param minutiaOrientation2 orientation of the 2nd minutia
+     * @return difference in orientation between the two minutiae
+     */
+    private static int getOrientationDifference(int minutiaOrientation1, int minutiaOrientation2) {
+
+        // calculates the absolute difference between the orientation of the two minutiae
+        return Math.abs(minutiaOrientation1 - minutiaOrientation2);
     }
 
     /**
@@ -1229,6 +1260,8 @@ public class Fingerprint {
 
             // ...if there are fewer matches remaining than needed for a valid match...
             if (nbMatches + potentialMatches < FOUND_THRESHOLD) {
+
+                System.out.println(nbMatches);
                 // ...stops looking for more matches and
                 // considers the fingerprints to be different
                 return false;
@@ -1245,27 +1278,45 @@ public class Fingerprint {
                 // ...gets the characteristics of the current minutia in that list
                 int minutiaRow2         = curMinutia2[0];
                 int minutiaCol2         = curMinutia2[1];
-                int orientation_two = curMinutia2[2];
+                int minutiaOrientation2 = curMinutia2[2];
 
-                int rotation=orientation_two-minutiaOrientation1;
+                // the difference in rotation between the two minutiae
+                int deltaRotation = minutiaOrientation2 - minutiaOrientation1;
 
-                for (int angle=rotation-MATCH_ANGLE_OFFSET;angle<=rotation+MATCH_ANGLE_OFFSET;angle++) {
+                // for every possible rotation between the two minutiae...
+                for (int angle = deltaRotation - MATCH_ANGLE_OFFSET;
+                     angle <= deltaRotation + MATCH_ANGLE_OFFSET;
+                     angle++) {
 
+                    // ...determines the translation necessary for the two minutiae to overlap
+                    int rowTranslation = minutiaRow2 - minutiaRow1;
+                    int colTranslation = minutiaCol2 - minutiaCol1;
+
+                    // ...applies the translation to the minutiae and rotates it
                     List<int[]> transformed_minutiae= applyTransformation(minutiae2, minutiaRow1, minutiaCol1,
-                                                                minutiaRow2 - minutiaRow1,
-                                                                minutiaCol2 - minutiaCol1,angle );
+                                                                rowTranslation, colTranslation, angle );
 
+                    // ...determines the number of matches for that specific translation / rotation combination
                     nbMatches = matchingMinutiaeCount(minutiae1, transformed_minutiae,
-                                                        DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
+                                                      DISTANCE_THRESHOLD,ORIENTATION_THRESHOLD);
+
+                    // if enough matches have been found...
                     if (nbMatches>=FOUND_THRESHOLD){
+
+                        System.out.println(nbMatches);
+
+                        // ...then the two fingerprints are identical
                         return true ;
                     }
                 }
             }
 
+            // one less possible match per loop iteration
             potentialMatches--;
         }
 
+        // if not enough matching minutiae were found,
+        // then the fingerprints are not identical
         return false;
     }
 
@@ -1343,7 +1394,11 @@ public class Fingerprint {
 
     // region DEBUG METHODS
 
-    // TODO Make this work
+    /**
+     * Copies a 2D array into another array
+     * @param original original to copy
+     * @param copy array in which the copy will be placed
+     */
     private static void copy2DArray(boolean[][] original, boolean[][] copy) {
 
         // size of the array
@@ -1353,7 +1408,7 @@ public class Fingerprint {
         // loops through every row in the array...
         for (int y = 0; y < ORIGINAL_HEIGHT; y++) {
             // ...and copies its content
-            copy[y] = Arrays.copyOf(original[y], ORIGINAL_WIDTH);
+            System.arraycopy(original[y], 0, copy[y], 0, ORIGINAL_WIDTH);
         }
     }
 
