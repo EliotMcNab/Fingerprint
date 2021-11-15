@@ -141,10 +141,10 @@ public class Main {
     //testCompareAllFingerprints("6_1", 6, true);
 
     //compare 1_1 with all images of finger 2
-    //testCompareAllFingerprints("1_1", 2, false);
+    testCompareAllFingerprints("6_1", 6, true);
 
     //compare 1_1 with all images of finger 3 to 16
-    for (int f = 3; f <= 16; f++) {
+    /*for (int f = 1; f <= 16; f++) {
 
       if (f == 1) {
         testCompareAllFingerprints("1_1", f, true);
@@ -152,7 +152,7 @@ public class Main {
       }
 
       testCompareAllFingerprints("1_1", f, false);
-    }
+    }*/
 
     //for (int i = 1; i <= 16; i++) {
     //  testCompareAllFingerprints(i + "_1", i, true);

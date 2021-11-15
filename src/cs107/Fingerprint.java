@@ -1,8 +1,6 @@
 package cs107;
 
-import javax.imageio.ImageIO;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -37,15 +35,6 @@ public class Fingerprint {
      * matching.
      */
     public static final int MATCH_ANGLE_OFFSET = 2;
-
-    /**
-     * The color of the minutiae and their orientation as in the processImage method
-     */
-    public static final int MINUTIA_CIRCLE_COLOR = 0xff0000;
-    public static final int MINUTIA_CIRCLE_RADIUS = 5;
-
-    public static final int MINUTIA_LINE_COLOR = 0xff00ff;
-    public static final int MINUTIA_LINE_LENGTH = 10;
 
     // ==========================================================================
     //                          GETTING PIXEL INFORMATION
@@ -141,8 +130,6 @@ public class Fingerprint {
     public static boolean[] getNeighbours(boolean[][] image, int row, int col) {
         assert (image != null); // special case that is not expected (the image is supposed to have been checked
                                 // earlier)
-
-        // TODO not functional yet but represents functionality of future Image class
 
         // the values around the current pixel
         boolean[] neighBoringValues = new boolean[8];
@@ -600,10 +587,6 @@ public class Fingerprint {
         boolean[][] connected_inter = new boolean[n][m];
 
         do{
-            /*for (int i = 0; i < n; i++) {
-                System.arraycopy(connected_pixels[i], 0, connected_inter[i], 0, m);
-            }*/
-
             copy2DArray(connected_pixels, connected_inter);
 
             for (int i = 0; i < n; i++) {
@@ -629,9 +612,10 @@ public class Fingerprint {
 
         return connected_pixels;
     }
+
     public static boolean hasBlackNeighbour(boolean[] blackNeighbours){
-        for (int i=0;i<blackNeighbours.length;i++){
-            if (blackNeighbours[i]==true) return true;
+        for (boolean blackNeighbour : blackNeighbours) {
+            if (blackNeighbour) return true;
         }
         return false;
     }
@@ -654,8 +638,7 @@ public class Fingerprint {
      */
     public static int[] slopeParameters(boolean[][] connectedPixels, int minutiaRow, int minutiaCol){
 
-        // the variable which will hold the parameters
-        // involved in computing the slope of a minutia
+
         int[] parameters = new int[3];
 
         // the variable which will hold the sum of the
@@ -954,7 +937,7 @@ public class Fingerprint {
     public static List<int[]> extract(boolean[][] image) {
 
         // variable which contains the coordinates of all the minutiae in a fingerprint
-        ArrayList<int[]> minutiaCoordinates = new ArrayList<int[]>();
+        ArrayList<int[]> minutiaCoordinates = new ArrayList<>();
 
         // size of the image
         final int IMAGE_HEIGHT = image.length;
@@ -1115,7 +1098,7 @@ public class Fingerprint {
                                                   int colTranslation, int rotation) {
 
         // the variable containing all the minutiae after they have been transformed
-        List <int[]> allTransformedMinutia = new ArrayList<int[]>();
+        List <int[]> allTransformedMinutia = new ArrayList<>();
 
         // for every minutia...
         for (int[] curMinutia : minutiae) {
@@ -1150,17 +1133,8 @@ public class Fingerprint {
         // the number of matches found so far
         int nbMatches=0;
 
-        // the number of remaining potential matches
-        int remainingMatches = minutiae1.size();
-
         // for every minutia in the first list of minutiae...
-        minutiaLoop1 : for (int[] curMinutia1 : minutiae1) {
-
-            // if there are less remaining potential matches than needed for a valid match...
-            /*if (nbMatches + remainingMatches < FOUND_THRESHOLD) {
-                // ...stops looking for more matches
-                return nbMatches;
-            }*/
+        for (int[] curMinutia1 : minutiae1) {
 
             // ...gets the characteristics of the current minutia in that list
             int minutiaRow1             = getMinutiaRow(curMinutia1);
@@ -1186,22 +1160,12 @@ public class Fingerprint {
                 final boolean MINUTIAE_ARE_CLOSE_ENOUGH = (minutiaEuclideanDistance <= maxDistance) &&
                                                           (orientation_difference <= maxOrientation);
 
-                // if the number of matches has reached the required threshold...
-                /*if (nbMatches >= FOUND_THRESHOLD) {
-                    // ...stops looking for more matches
-                    return nbMatches;
-                }*/
-
                 // the minutiae are within the allowed distance...
                 if (MINUTIAE_ARE_CLOSE_ENOUGH) {
                     // ...counts them as a match
                     nbMatches++;
                 }
             }
-
-            // one less possible match per loop iteration
-            //remainingMatches--;
-
         }
 
         // in the case where not enough matches have been found
@@ -1260,8 +1224,6 @@ public class Fingerprint {
 
             // ...if there are fewer matches remaining than needed for a valid match...
             if (nbMatches + potentialMatches < FOUND_THRESHOLD) {
-
-                System.out.println(nbMatches);
                 // ...stops looking for more matches and
                 // considers the fingerprints to be different
                 return false;
@@ -1303,10 +1265,8 @@ public class Fingerprint {
                     // if enough matches have been found...
                     if (nbMatches>=FOUND_THRESHOLD){
 
-                        System.out.println(nbMatches);
-
                         // ...then the two fingerprints are identical
-                        return true ;
+                        return true;
                     }
                 }
             }
@@ -1318,48 +1278,6 @@ public class Fingerprint {
         // if not enough matching minutiae were found,
         // then the fingerprints are not identical
         return false;
-    }
-
-    /**
-     * Converts an image to a boolean array
-     * @param path path (respective to Main.java) of the image
-     * @return image in array form
-     */
-    public static boolean[][] getImage(String path) {
-        // gets the image from the specified path
-        return Helper.readBinary(path);
-    }
-
-    /**
-     * Exports the array form of an image as a picture, emphasizing the minutiae and their orientation
-     * @param image the image in boolean array form
-     * @param fileName the name of the exported image
-     */
-    public static void processImage(boolean[][] image, String fileName) {
-
-        // gets the size of the original image
-        final int IMAGE_HEIGHT = image.length;
-        final int IMAGE_WIDTH = image[0].length;
-
-        // creates a copy of the original image so as not to modify it
-        boolean[][] imageCopy = new boolean[IMAGE_HEIGHT][IMAGE_WIDTH];
-        copy2DArray(image, imageCopy);
-
-        // applies thinning to the initial image
-        imageCopy = thin(image);
-
-        // extracts the minutiae from the thinned image
-        List<int[]> minutiae = extract(imageCopy);
-
-        // converts the copy of the image to ARGB format
-        int[][] ARGBImageCopy = Helper.fromBinary(imageCopy);
-
-        // makes the minutiae more visible on the final image
-        Helper.drawMinutia(ARGBImageCopy, minutiae);
-
-        // saves the final image to a png
-        Helper.writeARGB(fileName, ARGBImageCopy);
-
     }
 
     /**
@@ -1395,6 +1313,38 @@ public class Fingerprint {
     // region DEBUG METHODS
 
     /**
+     * Exports the array form of an image as a picture, emphasizing the minutiae and their orientation
+     * @param image the image in boolean array form
+     * @param fileName the name of the exported image
+     */
+    public static void processImage(boolean[][] image, String fileName) {
+
+        // gets the size of the original image
+        final int IMAGE_HEIGHT = image.length;
+        final int IMAGE_WIDTH = image[0].length;
+
+        // creates a copy of the original image so as not to modify it
+        boolean[][] imageCopy = new boolean[IMAGE_HEIGHT][IMAGE_WIDTH];
+        copy2DArray(image, imageCopy);
+
+        // applies thinning to the initial image
+        imageCopy = thin(image);
+
+        // extracts the minutiae from the thinned image
+        List<int[]> minutiae = extract(imageCopy);
+
+        // converts the copy of the image to ARGB format
+        int[][] ARGBImageCopy = Helper.fromBinary(imageCopy);
+
+        // makes the minutiae more visible on the final image
+        Helper.drawMinutia(ARGBImageCopy, minutiae);
+
+        // saves the final image to a png
+        Helper.writeARGB(fileName, ARGBImageCopy);
+
+    }
+
+    /**
      * Copies a 2D array into another array
      * @param original original to copy
      * @param copy array in which the copy will be placed
@@ -1412,62 +1362,22 @@ public class Fingerprint {
         }
     }
 
-    private static void emphasizeDifferences(int[][] original, int[][] toCompare) {
 
-        // the size of the image
-        final int IMAGE_HEIGHT = original.length;
-        final int IMAGE_WIDTH = original[0].length;
-
-        // loops through every row of the image...
-        for (int y = 0; y < IMAGE_HEIGHT; y++) {
-            // ...and every pixel for that row
-            for (int x = 0; x < IMAGE_WIDTH; x++) {
-                // ...if the pixels in both images are the same, and they are black
-                /*if (original[y][x] == toCompare[y][x] && original[y][x] == "fff") {
-                    // ...dims them
-                    original[y][x] =
-                }*/
-
-                // ...if the pixels in both images are different...
-//                if (original[y][x] != toCompare )
-            }
-        }
+    /**
+     * Converts an image to a boolean array
+     * @param path path (respective to Main.java) of the image
+     * @return image in array form
+     */
+    public static boolean[][] getImage(String path) {
+        // gets the image from the specified path
+        return Helper.readBinary(path);
     }
 
-    private static void createDebugImage(ArrayList<boolean[][]> debugImages) {
-
-        // the number of debug images
-        final int NUM_IMAGES = debugImages.size();
-
-        // the size of each individual debug image
-        final int IMAGE_HEIGHT = debugImages.get(0).length;
-        final int IMAGE_WIDTH = debugImages.get(0)[0].length;
-
-        // the width of the final image
-        final int FINAL_IMAGE_WIDTH = IMAGE_WIDTH * NUM_IMAGES;
-
-        // formatted debug image
-        final boolean[][] FINAL_DEBUG_IMAGE = new boolean[IMAGE_HEIGHT][FINAL_IMAGE_WIDTH];
-
-        // adds every debug image end-to-end to the final image
-        for (int y = 0; y < IMAGE_HEIGHT; y++) {
-            for (int x = 0; x < FINAL_IMAGE_WIDTH; x++) {
-
-                // the current debug image to add
-                int currentImage = x / IMAGE_WIDTH;
-
-                // the index of the pixel to add from the debug image
-                int currentPixel = x % (IMAGE_WIDTH);
-
-                // adds the currently selected pixel to the final image
-                FINAL_DEBUG_IMAGE[y][x] = debugImages.get(currentImage)[y][currentPixel];
-            }
-        }
-
-        // saves the debug image under png format
-        Helper.writeBinary("debug_fingerprint.png", FINAL_DEBUG_IMAGE);
-    }
-
+    /**
+     * Exports an image under skeleton form
+     * @param imagePath path of the image from which to extract the skeleton
+     * @param imageName name of the file to which to save the skeleton
+     */
     public static void exportSkeleton(String imagePath, String imageName) {
 
         boolean[][] image = getImage(imagePath);
